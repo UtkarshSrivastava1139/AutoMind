@@ -11,6 +11,7 @@ import { simulateDFA } from './dfa-simulator';
 import { simulateNFA } from './nfa-simulator';
 import { validateAutomaton } from './validator';
 import { generateTestStrings } from './test-generator';
+import type { OracleFunction } from './oracle';
 
 /**
  * Verify a candidate automaton against extracted parse results.
@@ -19,7 +20,8 @@ import { generateTestStrings } from './test-generator';
  */
 export function verifyCandidateAutomaton(
   candidate: Automaton,
-  parseResult: Pick<QuestionParseResult, 'positiveExamples' | 'negativeExamples' | 'alphabet'>
+  parseResult: Pick<QuestionParseResult, 'positiveExamples' | 'negativeExamples' | 'alphabet'>,
+  oracle?: OracleFunction
 ): VerificationResult {
   const structuralIssues: string[] = [];
 
@@ -76,8 +78,12 @@ export function verifyCandidateAutomaton(
   }
 
   // ── Bounded exhaustive check (short strings) ────────────────
-  // Generate all strings up to length 4 for additional coverage
-  const boundedStrings = generateTestStrings(parseResult.alphabet, 4);
+  // Generate strings up to length 6 (or less for large alphabets) for additional coverage
+  let maxLen = 6;
+  if (parseResult.alphabet.length >= 4) maxLen = 4;
+  else if (parseResult.alphabet.length === 3) maxLen = 5;
+
+  const boundedStrings = generateTestStrings(parseResult.alphabet, maxLen);
   const existingInputs = new Set([
     ...parseResult.positiveExamples,
     ...parseResult.negativeExamples,
@@ -86,10 +92,18 @@ export function verifyCandidateAutomaton(
   for (const input of boundedStrings) {
     if (existingInputs.has(input)) continue;
 
-    // We can only check consistency here (no expected value),
-    // so we just simulate to ensure no runtime errors
     try {
-      runSimulation(candidate, input);
+      const candidateResult = runSimulation(candidate, input);
+      
+      // If we have an oracle, we can do an exhaustive equivalence check
+      if (oracle) {
+        const expected = oracle(input);
+        if (candidateResult.accepted !== expected) {
+          counterexamples.push(
+            `"${input}" should be ${expected ? 'ACCEPTED' : 'REJECTED'} but was ${candidateResult.accepted ? 'ACCEPTED' : 'REJECTED'}`
+          );
+        }
+      }
     } catch {
       structuralIssues.push(`Simulation crashed on input "${input}"`);
     }
@@ -98,7 +112,11 @@ export function verifyCandidateAutomaton(
   // ── Final verdict ───────────────────────────────────────────
   const allPositivePassed = positiveResults.every((r) => r.passed);
   const allNegativePassed = negativeResults.every((r) => r.passed);
-  const passed = allPositivePassed && allNegativePassed && structuralIssues.length === 0;
+  const noCounterexamples = counterexamples.length === 0 || counterexamples.every(c => c.includes("should be"));
+  
+  // Actually, we already captured positive/negative failures in counterexamples
+  // So passed is strictly true if there are no counterexamples and no structural issues
+  const passed = allPositivePassed && allNegativePassed && counterexamples.length === 0 && structuralIssues.length === 0;
 
   let rejectionReason: string | undefined;
   if (!passed) {

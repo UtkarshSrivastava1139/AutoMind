@@ -87,8 +87,8 @@ function TransitionEdgeComponent({
       const chordDist = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
       const h = r - Math.sqrt(r * r - (chordDist * chordDist) / 4);
       
-      labelX = midX + nx * (h + 12);
-      labelY = midY + ny * (h + 12);
+      labelX = midX - nx * (h + 12);
+      labelY = midY - ny * (h + 12);
     } else {
       // ── Straight Edge (Shortest path between boundaries) ──
       edgePath = `M ${startX},${startY} L ${endX},${endY}`;

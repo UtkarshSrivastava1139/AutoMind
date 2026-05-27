@@ -152,6 +152,39 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   },
 
   onConnect: (connection: Connection) => {
+    const edges = get().edges;
+    // Check if there is already an existing edge in the same direction
+    const existingEdge = edges.find(
+      (e) => e.source === connection.source && e.target === connection.target
+    );
+
+    if (existingEdge) {
+      // Merge with existing edge by appending the next available symbol
+      const currentSymbol = (existingEdge.data?.symbol as string) || '';
+      const symbols = currentSymbol.split(',').map((s) => s.trim()).filter(Boolean);
+      
+      const symbolList = ['a', 'b', 'c', 'd', '0', '1', '2'];
+      let nextSymbol = 'b';
+      for (const sym of symbolList) {
+        if (!symbols.includes(sym)) {
+          nextSymbol = sym;
+          break;
+        }
+      }
+
+      const mergedSymbol = currentSymbol ? `${currentSymbol}, ${nextSymbol}` : nextSymbol;
+      
+      set({
+        edges: edges.map((e) =>
+          e.id === existingEdge.id
+            ? { ...e, data: { ...e.data, symbol: mergedSymbol } }
+            : e
+        ),
+      });
+      return;
+    }
+
+    // Otherwise, create a new transition edge
     const edge: Edge = {
       ...connection,
       id: `e-${connection.source}-${connection.target}-${Date.now()}`,
@@ -159,7 +192,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       data: { symbol: 'a' },
     };
     set({
-      edges: addEdge(edge, get().edges),
+      edges: addEdge(edge, edges),
     });
   },
 

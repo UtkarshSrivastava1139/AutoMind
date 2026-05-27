@@ -5,7 +5,7 @@ import { QuestionParseResultSchema } from '@automind/schemas';
 
 const SolveRequestSchema = z.object({
   questionText: z.string().min(5).max(2000),
-  parseResult: z.any(),
+  parseResult: QuestionParseResultSchema,
 });
 
 export async function POST(request: NextRequest) {

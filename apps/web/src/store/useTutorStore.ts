@@ -12,6 +12,7 @@ interface TutorStore {
   messages: ChatMessage[];
   isLoading: boolean;
   error: string | null;
+  abortController: AbortController | null;
 
   sendMessage: (content: string) => Promise<void>;
   clearChat: () => void;
@@ -24,13 +25,20 @@ export const useTutorStore = create<TutorStore>()(
       messages: [],
       isLoading: false,
       error: null,
+      abortController: null,
 
       sendMessage: async (content) => {
-        const { messages } = get();
+        const { messages, abortController } = get();
         
-        // Add user message
+        // Abort previous request if any is running
+        if (abortController) {
+          abortController.abort();
+        }
+
+        const activeController = new AbortController();
+
         const userMessage: ChatMessage = {
-          id: `msg-${Date.now()}`,
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
           role: 'user',
           content,
           timestamp: Date.now(),
@@ -42,6 +50,7 @@ export const useTutorStore = create<TutorStore>()(
           messages: updatedMessages,
           isLoading: true,
           error: null,
+          abortController: activeController,
         });
 
         try {
@@ -57,6 +66,7 @@ export const useTutorStore = create<TutorStore>()(
                 content: m.content,
               })),
             }),
+            signal: activeController.signal,
           });
 
           if (!response.ok) {
@@ -66,28 +76,44 @@ export const useTutorStore = create<TutorStore>()(
 
           const data = await response.json();
           const assistantMessage: ChatMessage = {
-            id: `msg-${Date.now() + 1}`,
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
             role: 'assistant',
             content: data.markdown || data.message || '',
             timestamp: Date.now(),
           };
 
-          set((state) => ({
-            messages: [...state.messages, assistantMessage],
-            isLoading: false,
-          }));
+          // Check if this request is still the latest one before updating state
+          if (get().abortController === activeController) {
+            set((state) => ({
+              messages: [...state.messages, assistantMessage],
+              isLoading: false,
+              abortController: null,
+            }));
+          }
         } catch (error: any) {
-          set({
-            error: error.message || 'An error occurred while communicating with the tutor',
-            isLoading: false,
-          });
+          if (error.name === 'AbortError') {
+            // Ignored because request was aborted
+            return;
+          }
+          if (get().abortController === activeController) {
+            set({
+              error: error.message || 'An error occurred while communicating with the tutor',
+              isLoading: false,
+              abortController: null,
+            });
+          }
         }
       },
 
       clearChat: () => {
+        const { abortController } = get();
+        if (abortController) {
+          abortController.abort();
+        }
         set({
           messages: [],
           error: null,
+          abortController: null,
         });
       },
 
@@ -97,6 +123,10 @@ export const useTutorStore = create<TutorStore>()(
     }),
     {
       name: 'tutor-store',
+      // Non-serializable elements like abortController should not be persisted
+      partialize: (state) => ({
+        messages: state.messages,
+      }),
     }
   )
 );

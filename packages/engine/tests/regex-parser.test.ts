@@ -67,4 +67,29 @@ describe('Regex Parser', () => {
   it('should throw on unexpected operator', () => {
     expect(() => parseRegex('*')).toThrow('Unexpected token');
   });
+
+  it('should support escape characters', () => {
+    const ast = parseRegex('a\\*b\\|c\\\\');
+    expect(ast).toEqual({
+      type: 'CONCAT',
+      left: {
+        type: 'CONCAT',
+        left: {
+          type: 'CONCAT',
+          left: {
+            type: 'CONCAT',
+            left: {
+              type: 'CONCAT',
+              left: { type: 'CHAR', value: 'a' },
+              right: { type: 'CHAR', value: '*' }
+            },
+            right: { type: 'CHAR', value: 'b' }
+          },
+          right: { type: 'CHAR', value: '|' }
+        },
+        right: { type: 'CHAR', value: 'c' }
+      },
+      right: { type: 'CHAR', value: '\\' }
+    });
+  });
 });

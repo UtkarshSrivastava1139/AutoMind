@@ -12,6 +12,7 @@ function StateNodeComponent({ id, data, selected }: { id: string; data: any; sel
     simulationStatus,
     toggleStartState,
     toggleAcceptState,
+    currentTool,
   } = useSimulatorStore();
   const { deleteElements } = useReactFlow();
   const [showMenu, setShowMenu] = useState(false);
@@ -86,13 +87,201 @@ function StateNodeComponent({ id, data, selected }: { id: string; data: any; sel
       className="relative group"
       onContextMenu={handleContextMenu}
     >
-      {/* ── Central Invisible Target Handle ── */}
+      {/* ── Central Invisible Handles (Active in connect mode) ── */}
       <Handle
         type="target"
         position={Position.Top}
         id="target-center"
         className="!w-full !h-full !rounded-full !border-0 !opacity-0 !bg-transparent"
-        style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: -1 }}
+        style={{
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: currentTool === 'add-transition' ? 9 : -1,
+          pointerEvents: currentTool === 'add-transition' ? 'auto' : 'none',
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="source-center"
+        className="!w-full !h-full !rounded-full !border-0 !opacity-0 !bg-transparent"
+        style={{
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: currentTool === 'add-transition' ? 10 : -1,
+          pointerEvents: currentTool === 'add-transition' ? 'auto' : 'none',
+        }}
+      />
+
+      {/* ── Connection Handles (visible on hover or when connect tool is active) ── */}
+      {/* Top Handle */}
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="source-top"
+        style={{
+          top: 0,
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '10px',
+          height: '10px',
+          background: 'var(--color-accent)',
+          border: '1.5px solid var(--color-border)',
+          zIndex: 10,
+        }}
+        className={`transition-all duration-200 hover:scale-125 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-50 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'
+        }`}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="target-top"
+        style={{
+          top: 0,
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '18px',
+          height: '18px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 9,
+        }}
+        className={`transition-all duration-200 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+        }`}
+      />
+
+      {/* Right Handle */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="source-right"
+        style={{
+          top: '50%',
+          right: 0,
+          transform: 'translate(50%, -50%)',
+          width: '10px',
+          height: '10px',
+          background: 'var(--color-accent)',
+          border: '1.5px solid var(--color-border)',
+          zIndex: 10,
+        }}
+        className={`transition-all duration-200 hover:scale-125 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-50 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'
+        }`}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="target-right"
+        style={{
+          top: '50%',
+          right: 0,
+          transform: 'translate(50%, -50%)',
+          width: '18px',
+          height: '18px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 9,
+        }}
+        className={`transition-all duration-200 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+        }`}
+      />
+
+      {/* Bottom Handle */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="source-bottom"
+        style={{
+          bottom: 0,
+          left: '50%',
+          transform: 'translate(-50%, 50%)',
+          width: '10px',
+          height: '10px',
+          background: 'var(--color-accent)',
+          border: '1.5px solid var(--color-border)',
+          zIndex: 10,
+        }}
+        className={`transition-all duration-200 hover:scale-125 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-50 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'
+        }`}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="target-bottom"
+        style={{
+          bottom: 0,
+          left: '50%',
+          transform: 'translate(-50%, 50%)',
+          width: '18px',
+          height: '18px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 9,
+        }}
+        className={`transition-all duration-200 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+        }`}
+      />
+
+      {/* Left Handle */}
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="source-left"
+        style={{
+          top: '50%',
+          left: 0,
+          transform: 'translate(-50%, -50%)',
+          width: '10px',
+          height: '10px',
+          background: 'var(--color-accent)',
+          border: '1.5px solid var(--color-border)',
+          zIndex: 10,
+        }}
+        className={`transition-all duration-200 hover:scale-125 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-50 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'
+        }`}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="target-left"
+        style={{
+          top: '50%',
+          left: 0,
+          transform: 'translate(-50%, -50%)',
+          width: '18px',
+          height: '18px',
+          background: 'transparent',
+          border: 'none',
+          zIndex: 9,
+        }}
+        className={`transition-all duration-200 !rounded-full ${
+          currentTool === 'add-transition'
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+        }`}
       />
 
       {/* ── Main Circle ── */}
@@ -130,15 +319,6 @@ function StateNodeComponent({ id, data, selected }: { id: string; data: any; sel
           </svg>
         </div>
       )}
-
-      {/* ── Central Invisible Source Handle ── */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="source-center"
-        className="!w-full !h-full !rounded-full !border-0 !opacity-0 !bg-transparent"
-        style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: -1 }}
-      />
 
       {/* ── Context Menu (right-click) ── */}
       {showMenu && (

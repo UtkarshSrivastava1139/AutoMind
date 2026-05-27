@@ -179,6 +179,7 @@ function Flow() {
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionMode={ConnectionMode.Loose}
+        nodesDraggable={store.currentTool !== 'add-transition'}
         fitView
         className="bg-[var(--color-bg-app)]"
         proOptions={{ hideAttribution: true }}

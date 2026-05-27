@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from 'react';
 import { useQuestionStore } from '@web/store/useQuestionStore';
@@ -45,13 +45,13 @@ export function SolutionDiagram(props: { style?: React.CSSProperties }) {
   const viewBox = `${centeredMinX} ${centeredMinY} ${width} ${height}`;
 
   return (
-    <div className="solution-diagram glass-card" style={props?.style}>
-      <div className="diagram-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="w-full h-full flex flex-col" style={props?.style}>
+      <div className="flex justify-between items-center bg-bg-card/50 px-5 py-4 border-b border-border w-full">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <h3 className="panel-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <GitGraph className="text-primary" size={20} />
             State Diagram
-            <span className={`status-badge ${solveResult.status === 'verified' ? 'verified' : 'partial'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1 border ${solveResult.status === 'verified' ? 'bg-success/20 text-success border-success/30' : 'bg-warning/20 text-warning border-warning/30'}`}>
               {solveResult.status === 'verified' ? (
                 <><CheckCircle2 size={12} /> Verified</>
               ) : (
@@ -220,12 +220,14 @@ export function SolutionDiagram(props: { style?: React.CSSProperties }) {
         </svg>
       </div>
 
-      <div className="diagram-legend">
-        <span className="legend-item"><span className="legend-dot start" /> Start</span>
-        <span className="legend-item"><span className="legend-dot accept" /> Accept</span>
-        <span className="legend-item">{automaton.states.length} states</span>
-        <span className="legend-item">{automaton.transitions.length} transitions</span>
+      <div className="flex flex-wrap items-center justify-center gap-4 py-3 bg-bg-card/30 border-t border-border w-full">
+        <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium"><span className="w-2.5 h-2.5 rounded-full border-2 border-primary bg-bg-app" /> Start</span>
+        <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium"><span className="w-3 h-3 rounded-full border border-primary bg-primary/20 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full border border-primary"/></span> Accept</span>
+        <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium px-2 py-0.5 bg-bg-app border border-border rounded">{automaton.states.length} states</span>
+        <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium px-2 py-0.5 bg-bg-app border border-border rounded">{automaton.transitions.length} transitions</span>
       </div>
     </div>
   );
 }
+
+

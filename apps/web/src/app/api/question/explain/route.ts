@@ -5,8 +5,8 @@ import { AutomatonSchema, QuestionParseResultSchema } from '@automind/schemas';
 
 const ExplainRequestSchema = z.object({
   questionText: z.string().min(5).max(2000),
-  parseResult: z.any(),
-  automaton: z.any(),
+  parseResult: QuestionParseResultSchema,
+  automaton: AutomatonSchema,
 });
 
 export async function POST(request: NextRequest) {

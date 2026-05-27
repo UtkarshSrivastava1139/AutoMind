@@ -7,8 +7,10 @@
 
 @theme inline {
   /* ---- Fonts ---- */
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-caveat), cursive;
 
   /* ---- Colors: Brand ---- */
   --color-primary: #6366F1;

@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
     "@xyflow/react": "^12.10.2",
+    "clsx": "^2.1.1",
     "elkjs": "^0.11.1",
     "html2pdf.js": "^0.14.0",
     "katex": "^0.16.46",
@@ -21,7 +23,9 @@
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "zustand": "^5.0.13"
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.13",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

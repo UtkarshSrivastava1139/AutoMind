@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk, Caveat } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -12,6 +12,19 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
   subsets: ["latin"],
   display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -38,6 +51,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { GlobalLayoutWrapper } from "@/components/shared/GlobalLayoutWrapper";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,11 +61,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${caveat.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col antialiased">
-        {children}
+      <body className="min-h-full flex flex-col antialiased overflow-y-auto">
+        <GlobalLayoutWrapper>{children}</GlobalLayoutWrapper>
       </body>
     </html>
   );
 }
+

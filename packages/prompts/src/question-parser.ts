@@ -34,8 +34,14 @@ export async function classifyQuestion(
 
   const parsed = OpenRouterClient.parseJSON<unknown>(result.content);
   const sanitizeData = (data: any) => {
-    if (data && typeof data.taskType === 'string' && data.taskType.startsWith(':')) {
-      data.taskType = data.taskType.replace(/^:/, '');
+    if (data && typeof data.taskType === 'string') {
+      data.taskType = data.taskType.replace(/^:/, '').trim();
+    }
+    if (data && typeof data.confidence !== 'number') {
+      data.confidence = 0.8;
+    }
+    if (data && typeof data.reasoning !== 'string') {
+      data.reasoning = 'Inferred from prompt fallback';
     }
     return data;
   };

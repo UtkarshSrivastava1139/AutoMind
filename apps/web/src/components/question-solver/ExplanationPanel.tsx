@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuestionStore } from '@web/store/useQuestionStore';
 import ReactMarkdown from 'react-markdown';
@@ -12,51 +12,63 @@ export function ExplanationPanel() {
   if (!solveResult) return null;
 
   return (
-    <div className="explanation-panel glass-card">
-      <div className="explanation-header">
-        <h3 className="panel-title" style={{ display: 'flex', alignItems: 'center' }}>
-          <Lightbulb className="text-yellow-400 mr-2" size={20} />
-          Explanation
-        </h3>
+    <div className="glass-card rounded-2xl border border-border shadow-md bg-bg-app overflow-hidden flex flex-col">
+      <div className="bg-bg-card/50 px-5 py-4 border-b border-border flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20">
+            <Lightbulb size={16} />
+          </div>
+          <h3 className="font-display font-semibold text-text-primary text-base">Explanation</h3>
+        </div>
         {!explanation && status !== 'explaining' && (
-          <button onClick={requestExplanation} className="explain-btn">
-            Generate Explanation
+          <button 
+            onClick={requestExplanation} 
+            className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold rounded-lg transition-all shadow shadow-primary/20"
+          >
+            Generate
           </button>
         )}
       </div>
 
       {status === 'explaining' && (
-        <div className="explanation-loading">
-          <span className="spinner" />
-          <span>Generating explanation...</span>
+        <div className="p-8 flex items-center justify-center gap-3 text-text-muted">
+          <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="font-medium animate-pulse">Generating explanation...</span>
         </div>
       )}
 
       {explanation && (
-        <>
-          <div className="explanation-content" style={{ padding: '0.5rem', lineHeight: '1.6' }}>
+        <div className="p-5 flex flex-col">
+          <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-headings:font-display prose-headings:text-text-primary prose-a:text-primary hover:prose-a:text-primary/80">
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]}
               components={{
-                h2: ({node, ...props}) => <h4 className="explanation-heading" {...props} />,
-                h3: ({node, ...props}) => <h5 className="explanation-heading" style={{fontSize: '1.1rem'}} {...props} />,
-                p: ({node, ...props}) => <p className="explanation-text" style={{marginBottom: '0.8rem'}} {...props} />,
-                li: ({node, ...props}) => <li className="explanation-point" style={{marginBottom: '0.4rem', marginLeft: '1.5rem'}} {...props} />,
-                ul: ({node, ...props}) => <ul style={{listStyleType: 'disc', marginBottom: '1rem'}} {...props} />,
-                code: ({node, ...props}) => <code style={{background: 'var(--color-bg-workspace)', padding: '0.2rem 0.4rem', borderRadius: '4px', color: 'var(--color-primary-light)'}} {...props} />,
+                h2: ({node, ...props}) => <h4 className="text-lg font-bold mt-4 mb-2 text-text-primary" {...props} />,
+                h3: ({node, ...props}) => <h5 className="text-base font-bold mt-3 mb-2 text-text-primary" {...props} />,
+                p: ({node, ...props}) => <p className="mb-3 text-text-secondary" {...props} />,
+                li: ({node, ...props}) => <li className="mb-1 text-text-secondary list-disc ml-4" {...props} />,
+                ul: ({node, ...props}) => <ul className="mb-4" {...props} />,
+                code: ({className, children, ...props}) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  return match ? (
+                    <code className={className} {...props}>{children}</code>
+                  ) : (
+                    <code className="bg-bg-card border border-border text-primary px-1.5 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>
+                  );
+                },
               }}
             >
               {explanation}
             </ReactMarkdown>
           </div>
-          <div className="explanation-meta" style={{ marginTop: '1.5rem', display: 'flex', gap: '8px', borderTop: '1px solid var(--color-border)', paddingTop: '1rem', alignItems: 'center' }}>
-            <span className="ai-badge" style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--color-bg-workspace)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-              <Bot size={14} className="mr-1" style={{ marginRight: '4px' }} /> AI-Generated
+          <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-2 items-center">
+            <span className="flex items-center gap-1.5 bg-bg-card border border-border px-2.5 py-1 rounded text-xs font-medium text-text-muted">
+              <Bot size={12} /> AI-Generated
             </span>
-            {explanationModel && <span className="model-tag" style={{ background: 'var(--color-bg-workspace)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{explanationModel}</span>}
-            {explainLatencyMs && <span className="latency-tag" style={{ background: 'var(--color-bg-workspace)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{(explainLatencyMs / 1000).toFixed(1)}s</span>}
+            {explanationModel && <span className="bg-bg-card border border-border px-2.5 py-1 rounded text-xs font-medium text-text-muted">{explanationModel}</span>}
+            {explainLatencyMs && <span className="bg-bg-card border border-border px-2.5 py-1 rounded text-xs font-medium text-text-muted font-mono">{(explainLatencyMs / 1000).toFixed(1)}s</span>}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

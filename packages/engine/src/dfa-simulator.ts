@@ -15,6 +15,17 @@ export function simulateDFA(
     };
   }
 
+  // Pre-build transition map for O(1) lookups: state -> symbol -> targetState
+  const transitionMap = new Map<string, Map<string, string>>();
+  for (const t of automaton.transitions) {
+    let stateMap = transitionMap.get(t.from);
+    if (!stateMap) {
+      stateMap = new Map<string, string>();
+      transitionMap.set(t.from, stateMap);
+    }
+    stateMap.set(t.symbol, t.to);
+  }
+
   const steps: SimulationStep[] = [];
   let currentState = automaton.startState;
   
@@ -39,9 +50,9 @@ export function simulateDFA(
        };
     }
 
-    const transition = automaton.transitions.find(t => t.from === currentState && t.symbol === symbol);
+    const nextState = transitionMap.get(currentState)?.get(symbol);
     
-    if (!transition) {
+    if (nextState === undefined) {
        // Should not happen if DFA is fully validated, but just in case
        return {
          accepted: false,
@@ -51,7 +62,7 @@ export function simulateDFA(
        };
     }
 
-    currentState = transition.to;
+    currentState = nextState;
     
     steps.push({
       index: i + 1,

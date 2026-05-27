@@ -1,0 +1,73 @@
+[
+  {
+    "canonicalQuestion": "even number of a's over {a,b}",
+    "variants": [
+      "even number of 0's",
+      "even number of a's",
+      "even count of 0's",
+      "even count of a's"
+    ],
+    "target": "a",
+    "automaton": {
+      "type": "DFA",
+      "states": ["q0", "q1"],
+      "alphabet": ["a", "b"],
+      "startState": "q0",
+      "acceptStates": ["q0"],
+      "transitions": [
+        { "from": "q0", "to": "q1", "symbol": "a" },
+        { "from": "q1", "to": "q0", "symbol": "a" },
+        { "from": "q0", "to": "q0", "symbol": "b" },
+        { "from": "q1", "to": "q1", "symbol": "b" }
+      ]
+    }
+  },
+  {
+    "canonicalQuestion": "odd number of a's over {a,b}",
+    "variants": [
+      "odd number of 0's",
+      "odd number of a's",
+      "odd count of 0's",
+      "odd count of a's"
+    ],
+    "target": "a",
+    "automaton": {
+      "type": "DFA",
+      "states": ["q0", "q1"],
+      "alphabet": ["a", "b"],
+      "startState": "q0",
+      "acceptStates": ["q1"],
+      "transitions": [
+        { "from": "q0", "to": "q1", "symbol": "a" },
+        { "from": "q1", "to": "q0", "symbol": "a" },
+        { "from": "q0", "to": "q0", "symbol": "b" },
+        { "from": "q1", "to": "q1", "symbol": "b" }
+      ]
+    }
+  },
+  {
+    "canonicalQuestion": "value divisible by 3 in binary",
+    "variants": [
+      "value divisible by 3 in binary",
+      "binary strings divisible by 3",
+      "divisible by 3 in binary",
+      "multiple of 3 in binary"
+    ],
+    "target": null,
+    "automaton": {
+      "type": "DFA",
+      "states": ["q0", "q1", "q2"],
+      "alphabet": ["0", "1"],
+      "startState": "q0",
+      "acceptStates": ["q0"],
+      "transitions": [
+        { "from": "q0", "to": "q0", "symbol": "0" },
+        { "from": "q0", "to": "q1", "symbol": "1" },
+        { "from": "q1", "to": "q2", "symbol": "0" },
+        { "from": "q1", "to": "q0", "symbol": "1" },
+        { "from": "q2", "to": "q1", "symbol": "0" },
+        { "from": "q2", "to": "q2", "symbol": "1" }
+      ]
+    }
+  }
+]

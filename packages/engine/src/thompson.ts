@@ -2,22 +2,19 @@ import type { Automaton, RegexASTNode } from '@automind/schemas';
 
 // Helper to generate unique state names
 let stateCounter = 0;
-function nextState(): string {
-  return `q${stateCounter++}`;
-}
-
 export function resetStateCounter() {
   stateCounter = 0;
 }
 
 export function astToNFA(ast: RegexASTNode): Automaton {
-  resetStateCounter();
-  const nfa = buildNFA(ast);
+  let counter = 0;
+  const nextState = () => `q${counter++}`;
+  const nfa = buildNFA(ast, nextState);
   nfa.type = 'NFA';
   return nfa;
 }
 
-function buildNFA(node: RegexASTNode): Automaton {
+function buildNFA(node: RegexASTNode, nextState: () => string): Automaton {
   switch (node.type) {
     case 'CHAR': {
       const start = nextState();
@@ -44,8 +41,8 @@ function buildNFA(node: RegexASTNode): Automaton {
       };
     }
     case 'CONCAT': {
-      const left = buildNFA(node.left!);
-      const right = buildNFA(node.right!);
+      const left = buildNFA(node.left!, nextState);
+      const right = buildNFA(node.right!, nextState);
       
       const newTransitions = [
         ...left.transitions,
@@ -64,8 +61,8 @@ function buildNFA(node: RegexASTNode): Automaton {
       };
     }
     case 'UNION': {
-      const left = buildNFA(node.left!);
-      const right = buildNFA(node.right!);
+      const left = buildNFA(node.left!, nextState);
+      const right = buildNFA(node.right!, nextState);
       
       const start = nextState();
       const accept = nextState();
@@ -89,7 +86,7 @@ function buildNFA(node: RegexASTNode): Automaton {
       };
     }
     case 'STAR': {
-      const child = buildNFA(node.child!);
+      const child = buildNFA(node.child!, nextState);
       const start = nextState();
       const accept = nextState();
       
@@ -111,7 +108,7 @@ function buildNFA(node: RegexASTNode): Automaton {
       };
     }
     case 'PLUS': {
-      const child = buildNFA(node.child!);
+      const child = buildNFA(node.child!, nextState);
       const start = nextState();
       const accept = nextState();
       
@@ -132,7 +129,7 @@ function buildNFA(node: RegexASTNode): Automaton {
       };
     }
     case 'OPTIONAL': {
-      const child = buildNFA(node.child!);
+      const child = buildNFA(node.child!, nextState);
       const start = nextState();
       const accept = nextState();
       

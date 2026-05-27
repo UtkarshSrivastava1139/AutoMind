@@ -89,6 +89,14 @@ export class OpenRouterClient {
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<ChatResult> {
     const startTime = Date.now();
 
+    if (!this.config.apiKey || this.config.apiKey.trim() === '') {
+      return {
+        success: false,
+        error: 'Missing OpenRouter API Key. Please configure the OPENROUTER_API_KEY environment variable.',
+        meta: { latencyMs: Date.now() - startTime },
+      };
+    }
+
     const body: Record<string, unknown> = {
       model: this.config.primaryModel,
       messages,
@@ -96,8 +104,9 @@ export class OpenRouterClient {
     };
 
     // Add fallback models if available (OpenRouter limit: max 3 models in the array)
+    const uniqueFallbacks = this.config.fallbackModels.filter((m) => m !== this.config.primaryModel);
     if (this.config.fallbackModels.length > 0) {
-      body.models = [this.config.primaryModel, ...this.config.fallbackModels].slice(0, 3);
+      body.models = [this.config.primaryModel, ...uniqueFallbacks].slice(0, 3);
     }
 
     // Request structured JSON output when possible

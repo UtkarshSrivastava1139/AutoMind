@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useQuestionStore } from '@web/store/useQuestionStore';
-import { ClipboardList, AlertTriangle } from 'lucide-react';
+import { ClipboardList, AlertTriangle, ArrowRight } from 'lucide-react';
 
 export function ExtractionPreview() {
   const { status, taskType, confidence, reasoning, parseResult, parseLatencyMs, solve } = useQuestionStore();
@@ -9,9 +9,9 @@ export function ExtractionPreview() {
   if (!parseResult || status === 'idle' || status === 'parsing') return null;
 
   const confidenceColor =
-    (confidence ?? 0) >= 0.85 ? 'var(--color-success)' :
-    (confidence ?? 0) >= 0.6 ? 'var(--color-warning)' :
-    'var(--color-error)';
+    (confidence ?? 0) >= 0.85 ? 'text-success' :
+    (confidence ?? 0) >= 0.6 ? 'text-warning' :
+    'text-error';
 
   const confidenceLabel =
     (confidence ?? 0) >= 0.85 ? 'High' :
@@ -19,94 +19,97 @@ export function ExtractionPreview() {
     'Low';
 
   return (
-    <div className="extraction-preview glass-card">
-      <h3 className="extraction-title" style={{ display: 'flex', alignItems: 'center' }}>
-        <ClipboardList className="text-primary mr-2" size={20} style={{ marginRight: '8px' }} />
-        Extraction
-      </h3>
+    <div className="glass-card bg-bg-app rounded-2xl border border-border shadow-md overflow-hidden flex flex-col">
+      <div className="bg-bg-card/50 px-5 py-4 border-b border-border flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+          <ClipboardList size={16} />
+        </div>
+        <h3 className="font-display font-semibold text-text-primary text-base">Extraction</h3>
+      </div>
 
-      <div className="extraction-grid">
-        <div className="extraction-field">
-          <span className="field-label">Task Type</span>
-          <span className="field-value task-type-badge">{taskType}</span>
+      <div className="p-5 flex flex-col gap-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Task Type</span>
+            <span className="text-sm font-medium bg-bg-card px-2 py-1 rounded inline-block w-fit border border-border shadow-sm">{taskType}</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Confidence</span>
+            <span className={`text-sm font-bold ${confidenceColor}`}>
+              {Math.round((confidence ?? 0) * 100)}% ({confidenceLabel})
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Alphabet</span>
+            <span className="text-sm font-mono text-secondary bg-secondary/10 px-2 py-1 rounded-md border border-secondary/20 w-fit">
+              {'{' + parseResult.alphabet.join(', ') + '}'}
+            </span>
+          </div>
+
+          {parseLatencyMs && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Parse Time</span>
+              <span className="text-sm font-mono text-text-secondary">{parseLatencyMs}ms</span>
+            </div>
+          )}
         </div>
 
-        <div className="extraction-field">
-          <span className="field-label">Confidence</span>
-          <span className="field-value" style={{ color: confidenceColor }}>
-            {Math.round((confidence ?? 0) * 100)}% ({confidenceLabel})
-          </span>
+        <div className="flex flex-col gap-1 border-t border-border pt-4">
+          <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Language</span>
+          <p className="text-sm text-text-primary bg-bg-card p-3 rounded-lg border border-border shadow-inner">{parseResult.languageDescription}</p>
         </div>
 
-        <div className="extraction-field">
-          <span className="field-label">Alphabet</span>
-          <span className="field-value">
-            {'{' + parseResult.alphabet.join(', ') + '}'}
-          </span>
-        </div>
+        {parseResult.atomicConstraints.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Constraints</span>
+            <ul className="flex flex-col gap-2">
+              {parseResult.atomicConstraints.map((c, i) => (
+                <li key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 text-sm bg-bg-card/50 p-2 rounded-lg border border-border">
+                  <span className="px-2 py-0.5 bg-primary/10 text-primary font-mono text-xs rounded border border-primary/20 shrink-0">{c.type}</span>
+                  <span className="text-text-secondary">{c.description}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-        {parseLatencyMs && (
-          <div className="extraction-field">
-            <span className="field-label">Parse Time</span>
-            <span className="field-value">{(parseLatencyMs / 1000).toFixed(1)}s</span>
+        {parseResult.assumptions.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <span className="text-xs uppercase font-semibold text-warning tracking-wider flex items-center gap-1.5">
+              <AlertTriangle size={14} /> Assumptions
+            </span>
+            <ul className="list-disc list-inside text-sm text-text-secondary pl-2 space-y-1">
+              {parseResult.assumptions.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {reasoning && (
+          <div className="flex flex-col gap-1 border-t border-border pt-4">
+            <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Reasoning</span>
+            <p className="text-sm text-text-secondary font-serif leading-relaxed bg-bg-card p-3 rounded-lg border border-border italic opacity-80">{reasoning}</p>
+          </div>
+        )}
+
+        {status === 'clarification' && (
+          <div className="mt-2 border-t border-border pt-5 flex flex-col items-center">
+            <p className="flex items-start justify-center gap-2 mb-4 text-warning bg-warning/10 p-3 rounded-lg border border-warning/20 text-sm">
+              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+              <span>Please review the constraints and assumptions above. If they look correct, you can proceed.</span>
+            </p>
+            <button 
+              className="w-full sm:w-auto px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2" 
+              onClick={() => solve()}
+            >
+              Generate Automaton <ArrowRight size={18} />
+            </button>
           </div>
         )}
       </div>
-
-      <div className="extraction-section">
-        <span className="field-label">Language</span>
-        <p className="language-description">{parseResult.languageDescription}</p>
-      </div>
-
-      {parseResult.atomicConstraints.length > 0 && (
-        <div className="extraction-section">
-          <span className="field-label">Constraints</span>
-          <ul className="constraints-list">
-            {parseResult.atomicConstraints.map((c, i) => (
-              <li key={i} className="constraint-item">
-                <span className="constraint-type">{c.type}</span>
-                <span className="constraint-desc">{c.description}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {parseResult.assumptions.length > 0 && (
-        <div className="extraction-section">
-          <span className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <AlertTriangle size={14} className="text-warning" /> Assumptions
-          </span>
-          <ul className="assumptions-list">
-            {parseResult.assumptions.map((a, i) => (
-              <li key={i}>{a}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {reasoning && (
-        <div className="extraction-section">
-          <span className="field-label">Reasoning</span>
-          <p className="reasoning-text">{reasoning}</p>
-        </div>
-      )}
-
-      {status === 'clarification' && (
-        <div className="extraction-actions" style={{ marginTop: '1.5rem', textAlign: 'center', borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
-          <p style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '8px', marginBottom: '1rem', color: 'var(--color-warning)', fontSize: '0.9rem' }}>
-            <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-            <span>Please review the constraints and assumptions above. If they look correct, you can proceed.</span>
-          </p>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => solve()}
-            style={{ width: '100%', padding: '0.75rem', fontWeight: 'bold' }}
-          >
-            Generate Automaton ➔
-          </button>
-        </div>
-      )}
     </div>
   );
 }

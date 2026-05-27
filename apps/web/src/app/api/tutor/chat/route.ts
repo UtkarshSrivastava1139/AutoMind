@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OpenRouterClient } from '@automind/prompts';
+import { OpenRouterClient, SYSTEM_PROMPT } from '@automind/prompts';
 // Lightweight server-side markdown -> HTML converter (avoid client-only libs)
 function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -40,26 +40,6 @@ function markdownToHtml(md: string): string {
   return lines.map((l) => (l.startsWith('<h') || l.startsWith('<ul>') || l.startsWith('<pre>') ? l : `<p>${l}</p>`)).join('\n');
 }
 
-const TUTOR_SYSTEM_PROMPT = `You are AutoMind Tutor, an expert educational assistant for Theory of Automata and Formal Languages.
-
-Your role is to help students understand:
-- Deterministic Finite Automata (DFA)
-- Non-deterministic Finite Automata (NFA)
-- Regular Expressions and their conversion to automata
-- Formal language theory concepts
-- Algorithms like Thompson's Construction, Subset Construction, and Hopcroft Minimization
-
-Guidelines:
-1. Explain concepts clearly using student-friendly language while maintaining formal precision.
-2. Use examples and step-by-step reasoning when explaining algorithms or concepts.
-3. When explaining automata, reference specific states and transitions.
-4. Use proper TAFL terminology but explain in accessible ways.
-5. For questions about equivalence or correctness, explain the reasoning behind the answer.
-6. If a question is outside the scope of TAFL, politely redirect to TAFL topics.
-7. Encourage students to think critically and ask follow-up questions.
-8. Be concise but thorough in your explanations.
-9. ALWAYS format math equations using standard Markdown math delimiters: use \`$\` for inline math (e.g., $\\delta$) and \`$$\` for block math. Do NOT use \`\\(\` and \`\\)\` or \`\\[\` and \`\\]\`.`;
-
 export async function POST(request: NextRequest) {
   try {
     const { messages } = await request.json();
@@ -80,13 +60,14 @@ export async function POST(request: NextRequest) {
 
     const client = new OpenRouterClient();
     
-    // Prepare messages with system prompt
+    // Prepare messages with system prompt & sliding window (keep last 10 messages)
+    const recentMessages = messages.slice(-10);
     const chatMessages = [
       {
         role: 'system' as const,
-        content: TUTOR_SYSTEM_PROMPT,
+        content: SYSTEM_PROMPT,
       },
-      ...messages.map((msg: any) => ({
+      ...recentMessages.map((msg: any) => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
       })),

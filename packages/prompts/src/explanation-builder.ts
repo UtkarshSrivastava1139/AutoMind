@@ -13,7 +13,8 @@ export async function generateExplanation(
   client: OpenRouterClient,
   questionText: string,
   parseResult: QuestionParseResult,
-  automaton: Automaton
+  automaton: Automaton,
+  stats?: { positivePassCount: number; positiveTotalCount: number; negativePassCount: number; negativeTotalCount: number }
 ): Promise<{ success: true; explanation: string; model: string; latencyMs: number } | { success: false; error: string }> {
   const transitionsText = automaton.transitions
     .map((t) => `  δ(${t.from}, ${t.symbol}) = ${t.to}`)
@@ -33,10 +34,10 @@ export async function generateExplanation(
     .replace('{{startState}}', automaton.startState)
     .replace('{{acceptStates}}', JSON.stringify(automaton.acceptStates))
     .replace('{{transitions}}', transitionsText)
-    .replace('{{positivePassCount}}', String(parseResult.positiveExamples.length))
-    .replace('{{positiveTotalCount}}', String(parseResult.positiveExamples.length))
-    .replace('{{negativePassCount}}', String(parseResult.negativeExamples.length))
-    .replace('{{negativeTotalCount}}', String(parseResult.negativeExamples.length));
+    .replace('{{positivePassCount}}', String(stats?.positivePassCount ?? parseResult.positiveExamples.length))
+    .replace('{{positiveTotalCount}}', String(stats?.positiveTotalCount ?? parseResult.positiveExamples.length))
+    .replace('{{negativePassCount}}', String(stats?.negativePassCount ?? parseResult.negativeExamples.length))
+    .replace('{{negativeTotalCount}}', String(stats?.negativeTotalCount ?? parseResult.negativeExamples.length));
 
   const messages = [
     { role: 'system' as const, content: prompt },

@@ -8,11 +8,30 @@ import { TransitionTableView } from '@web/components/question-solver/TransitionT
 import { TestCasePanel } from '@web/components/question-solver/TestCasePanel';
 import { ExplanationPanel } from '@web/components/question-solver/ExplanationPanel';
 import { PencilLoader } from '@web/components/ui/PencilLoader';
-import { useState } from 'react';
+import { AlertTriangle, CheckCircle2, PenLine, Cpu } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+const PROGRESS_MESSAGES = [
+  "Extracting entities...",
+  "Synthesizing logic...",
+  "Building automaton...",
+  "Running verification..."
+];
 
 export default function QuestionSolverPage() {
   const { status, error, solveResult } = useQuestionStore();
   const [isExporting, setIsExporting] = useState(false);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
+  useEffect(() => {
+    if (status === 'solving') {
+      setLoadingMsgIdx(0);
+      const interval = setInterval(() => {
+        setLoadingMsgIdx((prev) => (prev < PROGRESS_MESSAGES.length - 1 ? prev + 1 : prev));
+      }, 1500);
+      return () => clearInterval(interval);
+    }
+  }, [status]);
 
   const handleDownloadPDF = async () => {
     setIsExporting(true);
@@ -109,25 +128,24 @@ export default function QuestionSolverPage() {
   };
 
   return (
-    <div className="question-solver-page">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 pb-20">
       {/* Header */}
-      <div className="qs-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-4">
         <div>
-          <h1 className="qs-page-title">Question Solver</h1>
-          <p className="qs-page-subtitle">
+          <h1 className="text-2xl font-bold font-display text-text-primary">Question Solver</h1>
+          <p className="text-sm text-text-muted mt-1">
             Paste a Theory of Automata question → get a verified solution
           </p>
         </div>
         
         {status === 'solved' || status === 'explaining' ? (
           <button 
-            className="btn btn-secondary"
+            className="px-4 py-2 bg-bg-card hover:bg-primary/10 text-primary border border-primary/20 rounded-xl transition-all shadow-sm font-semibold text-sm flex items-center gap-2 h-fit"
             onClick={handleDownloadPDF}
             disabled={isExporting}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             data-html2canvas-ignore
           >
-            {isExporting ? <span className="spinner spinner-sm" /> : (
+            {isExporting ? <span className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin"/> : (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -144,32 +162,75 @@ export default function QuestionSolverPage() {
 
       {/* Error */}
       {error && status === 'error' && (
-        <div className="qs-error-banner" data-html2canvas-ignore>
-          <span className="error-icon">⚠</span>
+        <div className="flex items-center gap-3 p-4 bg-error/10 border border-error/20 text-error rounded-xl shadow-lg" data-html2canvas-ignore>
+          <AlertTriangle size={20} className="shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Idle State */}
+      {status === 'idle' && (
+        <div className="mt-6 p-8 md:p-12 glass-card rounded-2xl border border-border/50 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 text-primary-light mb-6 border border-primary/20">
+            <Cpu size={32} />
+          </div>
+          <h3 className="text-xl font-display font-semibold text-text-primary mb-3">
+            How Question Solver Works
+          </h3>
+          <p className="text-sm text-text-secondary max-w-lg mx-auto mb-10 leading-relaxed">
+            Our specialized engine converts plain English automata questions into formally verified computational models.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-text-muted mb-3 border border-border">
+                <PenLine size={18} />
+              </div>
+              <h4 className="text-sm font-semibold text-text-primary mb-1">1. Ask a Question</h4>
+              <p className="text-xs text-text-muted text-center px-4">Paste any DFA/NFA/Regex question in plain text.</p>
+            </div>
+            <div className="flex flex-col items-center relative">
+              <div className="hidden md:block absolute top-5 -left-1/4 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="hidden md:block absolute top-5 -right-1/4 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary-light mb-3 border border-primary/20">
+                <Cpu size={18} />
+              </div>
+              <h4 className="text-sm font-semibold text-text-primary mb-1">2. AI Extraction</h4>
+              <p className="text-xs text-text-muted text-center px-4">AI extracts formal parameters and test cases.</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success mb-3 border border-success/20">
+                <CheckCircle2 size={18} />
+              </div>
+              <h4 className="text-sm font-semibold text-text-primary mb-1">3. Verified Output</h4>
+              <p className="text-xs text-text-muted text-center px-4">Deterministic engine generates & validates the model.</p>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Results Area */}
       <div id="pdf-export-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
         {(status === 'parsed' || status === 'clarification' || status === 'solving' || status === 'solved' || status === 'explaining') && (
-        <div className="qs-results-grid">
+        <div className="qs-results-grid grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 items-start w-full">
           {/* Left Column: Extraction + Test Cases */}
-          <div className="qs-left-column">
+          <div className="qs-left-column flex flex-col gap-6 w-full">
             <ExtractionPreview />
             <TestCasePanel />
           </div>
 
           {/* Right Column: Diagram + Table */}
-          <div className="qs-right-column">
+          <div className="qs-right-column flex flex-col gap-6 w-full min-w-0">
             {status === 'solving' ? (
-              <div className="qs-solving-indicator">
+              <div className="min-h-[400px] glass-card flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-border bg-bg-app shadow-2xl relative overflow-hidden">
                 <PencilLoader />
-                <p style={{ marginTop: '1rem', color: 'var(--color-primary-light)', fontWeight: 600 }}>Analyzing & Generating Automaton...</p>
+                <p className="mt-6 text-primary font-semibold tracking-wide animate-pulse">
+                  {PROGRESS_MESSAGES[loadingMsgIdx]}
+                </p>
               </div>
             ) : (
               <>
-                <div className="pdf-diagram-wrapper">
+                <div className="w-full glass-card rounded-2xl border border-border bg-bg-app overflow-hidden shadow-2xl flex flex-col items-center relative lg:sticky lg:top-20 lg:z-10">
                   <SolutionDiagram />
                 </div>
                 <TransitionTableView />
@@ -183,16 +244,20 @@ export default function QuestionSolverPage() {
 
       {/* Verification Status Footer */}
       {solveResult && status === 'solved' && (
-        <div className="qs-status-footer" data-html2canvas-ignore>
-          <div className="status-info">
-            <span className={`verification-badge ${solveResult.status}`}>
-              {solveResult.status === 'verified' ? '✓ Engine Verified' : '⚠ Partially Verified'}
+        <div className="glass-card mt-8 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5" data-html2canvas-ignore>
+          <div className="flex items-center gap-4">
+            <span className={`px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide shadow-sm flex items-center gap-2 ${solveResult.status === 'verified' ? 'bg-success/20 text-success border border-success/30' : 'bg-warning/20 text-warning border border-warning/30'}`}>
+              {solveResult.status === 'verified' ? (
+                <><CheckCircle2 size={16} /> Engine Verified</>
+              ) : (
+                <><AlertTriangle size={16} /> Partially Verified</>
+              )}
             </span>
-            <span className="candidates-info">
+            <span className="text-sm font-medium text-text-muted bg-bg-app px-3 py-1 rounded-lg border border-border shadow-inner">
               {solveResult.candidatesEvaluated} candidate(s) evaluated
             </span>
           </div>
-          <p className="verification-note">
+          <p className="text-xs text-text-muted/80 max-w-sm text-center md:text-right hidden sm:block">
             All formal results are verified by the deterministic engine. AI is used only for interpretation and explanation.
           </p>
         </div>
@@ -200,3 +265,5 @@ export default function QuestionSolverPage() {
     </div>
   );
 }
+
+

@@ -18,3 +18,6 @@ export type { ValidationResult } from './validator';
 export { verifyCandidateAutomaton } from './question-verifier';
 export { generateTestStrings, generateEdgeCaseStrings } from './test-generator';
 export { buildTransitionTable } from './transition-table';
+export { buildDeterministicOracle, buildDeterministicDFA } from './oracle';
+export type { OracleFunction } from './oracle';
+export { lookupCanonicalCache } from './cache-manager';

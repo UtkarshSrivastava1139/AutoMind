@@ -16,6 +16,7 @@ import type {
   AmbiguityFlag,
   TaskClassification,
 } from '@automind/schemas';
+import { AutomatonSchema } from '@automind/schemas';
 import { classifyQuestion, extractConstraints, detectAmbiguities } from './question-parser';
 import { generateExplanation } from './explanation-builder';
 import { DFA_CONSTRUCTION_HINT_PROMPT } from './question-prompts';
@@ -25,6 +26,12 @@ import {
   parseRegex,
   astToNFA,
   resetStateCounter,
+  generateEdgeCaseStrings,
+  generateTestStrings,
+  simulateNFA,
+  buildDeterministicOracle,
+  buildDeterministicDFA,
+  lookupCanonicalCache,
 } from '@automind/engine';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -107,8 +114,7 @@ export async function parseQuestion(
 
   const needsClarification =
     ambiguityResult.overallAssessment === 'needs_clarification' ||
-    extraction.data.confidence < 0.6 ||
-    allAmbiguities.length > 0;
+    extraction.data.confidence < 0.6;
 
   return {
     success: true,
@@ -152,32 +158,96 @@ async function solveBuildDFA(
   questionText: string,
   parseResult: QuestionParseResult
 ): Promise<SolveStageResult | SolveStageError> {
-  // Ask LLM for a suggested DFA structure
-  const candidate = await requestDFACandidate(client, parseResult);
-  if (!candidate.success) {
-    return { success: false, error: candidate.error, stage: 'generate' };
+  // Tier 1: Canonical Cache
+  const cached = lookupCanonicalCache(questionText, parseResult.alphabet);
+  if (cached) {
+    const verification = verifyCandidateAutomaton(cached, parseResult);
+    return buildVerifiedResult(cached, parseResult, verification);
   }
 
-  // Verify the candidate
-  const verification = verifyCandidateAutomaton(candidate.automaton, parseResult);
-
-  if (!verification.passed) {
-    // Try once more with feedback
-    const retry = await requestDFACandidate(client, parseResult, verification.counterexamples);
-    if (!retry.success) {
-      return buildUnverifiedResult(candidate.automaton, parseResult, verification);
-    }
-
-    const retryVerification = verifyCandidateAutomaton(retry.automaton, parseResult);
-    if (!retryVerification.passed) {
-      return buildUnverifiedResult(retry.automaton, parseResult, retryVerification);
-    }
-
-    // Retry passed
-    return buildVerifiedResult(retry.automaton, parseResult, retryVerification);
+  // Tier 2: Deterministic Construction
+  const deterministicDFA = buildDeterministicDFA(parseResult);
+  if (deterministicDFA) {
+    const verification = verifyCandidateAutomaton(deterministicDFA, parseResult);
+    return buildVerifiedResult(deterministicDFA, parseResult, verification);
   }
 
-  return buildVerifiedResult(candidate.automaton, parseResult, verification);
+  // Tier 3: Programmatic Oracle Seeding
+  const oracle = buildDeterministicOracle(parseResult);
+  if (oracle) {
+    // We can clear and perfectly regenerate positive/negative examples
+    parseResult.positiveExamples = [];
+    parseResult.negativeExamples = [];
+    
+    const mappedConstraints = parseResult.atomicConstraints.map((c) => ({
+      type: c.type,
+      target: c.target ?? undefined,
+      value: c.value ?? undefined,
+    }));
+    // We can generate more strings now that we have a fast perfect oracle
+    const edgeCases = [
+      ...generateEdgeCaseStrings(parseResult.alphabet, mappedConstraints),
+      ...generateTestStrings(parseResult.alphabet, 4) // Add all short strings to examples
+    ];
+    
+    const uniqueEdges = Array.from(new Set(edgeCases));
+    for (const edge of uniqueEdges) {
+      if (oracle(edge)) parseResult.positiveExamples.push(edge);
+      else parseResult.negativeExamples.push(edge);
+    }
+  } else {
+    // Fallback: implicit regex oracle
+    const implicitRegex = extractRegexFromParseResult(parseResult);
+    if (implicitRegex) {
+      try {
+        resetStateCounter();
+        const nfaOracle = astToNFA(parseRegex(implicitRegex));
+        const mappedConstraints = parseResult.atomicConstraints.map((c) => ({
+          type: c.type,
+          target: c.target ?? undefined,
+          value: c.value ?? undefined,
+        }));
+        const edgeCases = generateEdgeCaseStrings(parseResult.alphabet, mappedConstraints);
+        for (const edge of edgeCases) {
+          if (!parseResult.positiveExamples.includes(edge) && !parseResult.negativeExamples.includes(edge)) {
+            const sim = simulateNFA(nfaOracle, edge);
+            if (sim.accepted) parseResult.positiveExamples.push(edge);
+            else parseResult.negativeExamples.push(edge);
+          }
+        }
+      } catch (e) {
+        // Regex parsing failed, ignore
+      }
+    }
+  }
+
+  // Tier 4: Iterative LLM Refinement
+  const MAX_ATTEMPTS = 3;
+  let bestCandidate = null;
+  let bestVerification = null;
+  let counterexamples: string[] = [];
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const candidate = await requestDFACandidate(client, parseResult, counterexamples);
+    if (!candidate.success) {
+      if (attempt === 0) return { success: false, error: candidate.error, stage: 'generate' };
+      break; // Return the best we have so far
+    }
+
+    const verification = verifyCandidateAutomaton(candidate.automaton, parseResult, oracle || undefined);
+    
+    if (verification.passed) {
+      return buildVerifiedResult(candidate.automaton, parseResult, verification);
+    }
+
+    bestCandidate = candidate.automaton;
+    bestVerification = verification;
+
+    // Provide up to 5 counterexamples for the next attempt
+    counterexamples = verification.counterexamples.slice(0, 5);
+  }
+
+  return buildUnverifiedResult(bestCandidate!, parseResult, bestVerification!);
 }
 
 async function requestDFACandidate(
@@ -213,25 +283,21 @@ async function requestDFACandidate(
 
   const data = parsed.data;
 
-  // Build Automaton from LLM response
-  try {
-    const automaton: Automaton = {
-      type: 'DFA',
-      states: data.states as string[],
-      alphabet: parseResult.alphabet,
-      startState: data.startState as string,
-      acceptStates: data.acceptStates as string[],
-      transitions: (data.transitions as Array<{ from: string; to: string; symbol: string }>).map((t) => ({
-        from: t.from,
-        to: t.to,
-        symbol: t.symbol,
-      })),
-    };
+  // Validate the structure with Zod
+  const validationResult = AutomatonSchema.safeParse({
+    type: 'DFA',
+    states: (data as any).states,
+    alphabet: parseResult.alphabet,
+    startState: (data as any).startState,
+    acceptStates: (data as any).acceptStates,
+    transitions: (data as any).transitions,
+  });
 
-    return { success: true, automaton };
-  } catch (err) {
-    return { success: false, error: `Failed to construct automaton: ${err instanceof Error ? err.message : String(err)}` };
+  if (!validationResult.success) {
+    return { success: false, error: `Invalid automaton structure from AI: ${validationResult.error.message}` };
   }
+
+  return { success: true, automaton: validationResult.data };
 }
 
 // ── regex_to_nfa strategy ──────────────────────────────────────

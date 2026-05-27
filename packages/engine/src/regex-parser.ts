@@ -6,6 +6,16 @@ export function tokenizeRegex(pattern: string): RegexToken[] {
   for (let i = 0; i < pattern.length; i++) {
     const char = pattern[i];
     
+    if (char === '\\') {
+      if (i === pattern.length - 1) {
+        throw new Error("Trailing backslash in regular expression");
+      }
+      i++;
+      const nextChar = pattern[i];
+      tokens.push({ type: 'CHAR', value: nextChar, position: i - 1 });
+      continue;
+    }
+    
     let type: RegexTokenType;
     if (char === '|') type = 'UNION';
     else if (char === '*') type = 'STAR';

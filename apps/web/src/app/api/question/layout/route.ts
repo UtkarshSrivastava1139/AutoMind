@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { OpenRouterClient } from '@automind/prompts';
-import { AILayoutResponseSchema } from '@automind/schemas';
-import { AI_LAYOUT_PROMPT } from '@automind/prompts/src/question-prompts';
+import { OpenRouterClient, AI_LAYOUT_PROMPT } from '@automind/prompts';
+import { AILayoutResponseSchema, AutomatonSchema } from '@automind/schemas';
 
 const LayoutRequestSchema = z.object({
-  automaton: z.any(), // Accept the automaton directly
+  automaton: AutomatonSchema,
 });
 
 export async function POST(request: NextRequest) {
