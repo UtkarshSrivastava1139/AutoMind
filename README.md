@@ -1,68 +1,75 @@
-# 🧠 AutoMind
+<div align="center">
+  
+# 🧠 AutoMind: The Ultimate Platform for Automata & Formal Languages
 
-**AutoMind** is an intelligent, interactive, and visual learning platform designed to simplify the understanding of Theory of Automata and Formal Languages (TAFL) through simulation, visualization, AI-assisted learning, and gamified education.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Built with Next.js](https://img.shields.io/badge/Built_with-Next.js-black?logo=next.js)](https://nextjs.org/)
+[![Powered by AI](https://img.shields.io/badge/Powered_by-AI-purple?logo=openai)](https://openai.com)
 
-By bridging the gap between theoretical computer science concepts and practical understanding, AutoMind enables students to visually create, simulate, analyze, and learn automata systems interactively.
+**Say goodbye to staring at static whiteboard diagrams.** 
 
----
+AutoMind is a breakthrough, interactive learning platform designed to make the Theory of Automata and Formal Languages (TAFL) intuitive, visual, and brilliantly engaging. Built with a mathematically rigorous deterministic engine and paired with a sleek visual workspace, AutoMind turns theoretical computer science into an interactive sandbox.
 
-## ✨ Core Features
+[Explore Features](#-core-features) • [Tech Stack](#-technology-stack) • [Getting Started](#-getting-started) • [Roadmap](#-roadmap)
 
-AutoMind replaces static whiteboard theory with a fully interactive digital lab environment.
-
-### 1. ◉ Automata Simulator (DFA / NFA)
-A node-based visual workspace to build and simulate finite automata.
-- **Visual Editor:** Drag-and-drop canvas for drawing states and transitions.
-- **Interactive Execution:** Step-by-step string simulation with active state highlighting.
-- **Automated Validation:** Instantly identifies if strings are accepted or rejected based on your graph.
-
-### 2. ⚡ Regex Converter Pipeline
-Convert any Regular Expression into minimized Deterministic Finite Automata visually.
-- **Step 1 (AST):** Parses the regular expression into an Abstract Syntax Tree.
-- **Step 2 (NFA):** Applies **Thompson's Construction** to generate an NFA with ε-transitions.
-- **Step 3 (DFA):** Uses **Subset Construction** to convert the NFA into a DFA.
-- **Step 4 (Minimization):** Uses **Hopcroft's Algorithm** to minimize the DFA.
-- **Direct Integration:** Seamlessly export the final minimized DFA directly into the interactive simulator.
-
-### 3. 🧠 Question Solver (Q-Solver)
-A specialized module for academic practice and verification.
-- **Problem Input:** Enter language definitions or automata constraints.
-- **Automated Solutions:** Generates the required state machine automatically.
-- **Verification:** Marks problems as "Verified" or "Partial" based on rigorous test cases.
-- **Export:** Open generated solutions directly in the Simulator for further manual tweaking.
-
-### 4. ✧ AI Tutor
-A built-in context-aware artificial intelligence assistant.
-- **Doubt Resolution:** Ask questions like *"Why is this string rejected?"* or *"Explain DFA minimization"*.
-- **Persistent Drawer:** The AI Tutor sidebar is globally available across the workspace.
-- **Mathematical Rendering:** Fully supports Markdown, LaTeX, and formula rendering for academic answers.
-
-### 5. ✦ Quizzes & Gamification (Coming Soon)
-- Topic-wise Multiple Choice Questions.
-- Interactive simulation prediction tests.
-- XP, Badges, and Streaks to reward consistent learning.
+</div>
 
 ---
 
-## 🛠️ Technology Stack
+## ✨ Why AutoMind?
 
-AutoMind is built using a modern, scalable web stack:
+AutoMind doesn’t just show you how automata work—it lets you **build**, **simulate**, **test**, and **break** them in real-time. Whether you are a student preparing for finals, an educator demonstrating Hopcroft's Algorithm, or a compiler enthusiast parsing regular expressions, AutoMind is your digital lab.
+
+### 🎯 Core Features Built for You
+
+#### 1. 🕹️ The Visual Automata Simulator
+Step inside a beautiful, node-based workspace to construct finite automata visually.
+- **Drag-and-Drop Canvas:** Seamlessly draw states, connect transitions, and define acceptance.
+- **Real-Time Simulation:** Watch strings flow through your machine step-by-step with glowing active states.
+- **Instant Validation:** Test edge-cases on the fly. Know exactly when and why a string is rejected or accepted.
+
+#### 2. ⚡ The Intelligent Regex Converter Pipeline
+Ever wondered what a regular expression looks like under the hood? AutoMind visualizes the entire compilation pipeline!
+- **AST Generation:** Parse regex into an elegant Abstract Syntax Tree.
+- **Thompson's Construction:** Instantly generate an NFA with ε-transitions.
+- **Subset Construction:** Convert your NFA into a deterministic machine (DFA) automatically.
+- **Hopcroft’s Minimization:** Optimize the DFA to its mathematical minimum.
+- **Export to Simulator:** Take the final minimized DFA and tweak it in the visual editor.
+
+#### 3. 🧠 The Q-Solver (Question Solver)
+Struggling with homework? The Q-Solver is your rigorous academic companion.
+- **Natural Language Input:** Type constraints like *"Starts with 'ab' and has an even number of 0s"*.
+- **Bulletproof Deterministic Engine:** AutoMind doesn't guess. It uses a mathematically sound product-engine architecture, cross-product BFS equivalence proofs, and exhaustive bounded checking to guarantee 100% correct DFAs.
+- **Instant Verdicts:** See exactly why a solution works through robust test case verification.
+
+#### 4. ✧ Your Personal AI Tutor
+Never get stuck again.
+- **Context-Aware Assistance:** Ask the AI *"Why did this string fail in state q3?"* or *"Explain how to convert this NFA."*
+- **Persistent Global Drawer:** Your AI tutor follows you everywhere across the platform.
+- **Rich Mathematical Rendering:** LaTeX and Markdown support means complex formulas always look beautiful and legible.
+
+---
+
+## 🛠️ State-of-the-Art Technology Stack
+
+AutoMind isn't just powerful on the surface; it's engineered with the modern web in mind.
 
 **Frontend Ecosystem:**
-- **Framework:** Next.js (App Router)
-- **Styling:** Tailwind CSS + Glassmorphism UI
-- **Graph Engine:** React Flow / ELKjs (for automatic layouting)
-- **State Management:** Zustand
-- **Icons & UI:** Lucide React, Radix UI
+- **Framework:** Next.js (App Router) for blazing-fast performance.
+- **Styling:** Tailwind CSS + Glassmorphism UI for a stunning, premium aesthetic.
+- **Graph Engine:** React Flow + ELKjs for auto-layouting massive state machines perfectly.
+- **State Management:** Zustand for ultra-lightweight, reactive state.
 
-**Backend & AI:**
-- **Runtime:** Node.js / React Server Components
-- **AI Integration:** OpenAI API (for the AI Tutor)
-- **Data Parsing:** Custom Regex and Automata parsing engines
+**Backend, Engine & AI:**
+- **Automata Engine:** A custom-built, zero-dependency TypeScript deterministic engine for mathematically pure DFA/NFA evaluation and generation.
+- **AI Integration:** OpenAI API orchestrates the Q-Solver intent parsing and powers the interactive AI Tutor.
+- **Runtime:** Node.js + React Server Components.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started in Minutes
+
+Ready to dive in? Getting AutoMind running locally is a breeze.
 
 ### Prerequisites
 Make sure you have [Node.js](https://nodejs.org/) (v18+) and `npm` or `pnpm` installed.
@@ -78,12 +85,10 @@ Make sure you have [Node.js](https://nodejs.org/) (v18+) and `npm` or `pnpm` ins
 2. **Install dependencies:**
    ```bash
    npm install
-   # or
-   pnpm install
    ```
 
 3. **Set up environment variables:**
-   Create a `.env.local` file in the root directory and configure your AI provider (e.g., OpenAI):
+   Create a `.env.local` file in the root directory and configure your AI provider:
    ```env
    OPENAI_API_KEY=your_api_key_here
    ```
@@ -91,48 +96,27 @@ Make sure you have [Node.js](https://nodejs.org/) (v18+) and `npm` or `pnpm` ins
 4. **Start the development server:**
    ```bash
    npm run dev
-   # or
-   pnpm dev
    ```
 
-5. **Open the app:**
-   Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+5. **Experience AutoMind:**
+   Navigate to [http://localhost:3000](http://localhost:3000) and start building!
 
 ---
 
-## 📂 Project Structure
+## 🗺️ What's Next? (Roadmap)
 
-```text
-apps/web/src/
- ├── app/                     # Next.js App Router (Dashboard, Workspace, Marketing)
- │    ├── (dashboard)/        # Global app layout with Sidebar
- │    └── (workspace)/        # Fullscreen canvas layouts
- ├── components/
- │    ├── ai-tutor/           # AI Chat drawer and logic
- │    ├── question-solver/    # QSolver inputs, test cases, and solution diagrams
- │    ├── regex-converter/    # AST, Thompson's, Subset, and Hopcroft's algorithms UI
- │    ├── simulator/          # React Flow canvas, StateNodes, TransitionEdges
- │    └── shared/             # Global Sidebar and Layout Wrappers
- ├── lib/                     # ELK layouting, graph converters, math utilities
- ├── store/                   # Zustand stores (useSimulatorStore, useRegexStore)
- └── ...
-packages/engine/              # Core Automata theory and conversion algorithms
-```
+We are constantly pushing the boundaries of what a digital learning platform can be.
+
+- 🟢 **Phase 1 (Live):** DFA/NFA Simulator, Regex Pipeline, AI Tutor, Q-Solver.
+- 🟡 **Phase 2 (Coming Soon):** Context-Free Grammar (CFG) Parser & Leftmost/Rightmost Derivation Trees.
+- 🔵 **Phase 3:** Pushdown Automata (PDA) & Turing Machine Simulation.
+- 🟣 **Phase 4:** Gamification (XP, Leaderboards, Badges, and Social Challenges).
 
 ---
 
-## 🗺️ Roadmap
+## 🤝 Join the Movement
 
-- **Phase 1 (Current):** DFA/NFA Simulator, Regex Converter, Basic AI Tutor, QSolver.
-- **Phase 2:** Context-Free Grammar (CFG) Parser, Leftmost/Rightmost derivations.
-- **Phase 3:** Pushdown Automata (PDA) and Turing Machine Simulators.
-- **Phase 4:** Full Gamification (XP, Leaderboards, Social Challenges).
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! If you're passionate about computer science education, feel free to fork the repository and submit a Pull Request.
+We believe computer science education should be accessible and visually engaging for everyone. Contributions are welcome and highly encouraged! 
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -142,6 +126,7 @@ Contributions are welcome! If you're passionate about computer science education
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+<div align="center">
+  <p>Built with ❤️ for Computer Science students everywhere.</p>
+  <p>Licensed under the MIT License.</p>
+</div>
