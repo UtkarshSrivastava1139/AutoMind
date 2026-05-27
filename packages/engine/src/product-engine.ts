@@ -6,7 +6,7 @@ export interface PrimitiveMachine {
   isAccepting: (state: string) => boolean;
 }
 
-function assertSingleSymbolTarget(target: string | undefined, constraintType: string): string | null {
+function assertSingleSymbolTarget(target: string | null | undefined, constraintType: string): string | null {
   if (!target || target === '') return null;
   if (target.length === 1) return target;
   throw new Error(`Unsupported deterministic ${constraintType}: target length > 1 is not supported ("${target}")`);
