@@ -55,15 +55,31 @@ export function buildTransitionTable(automaton: Automaton): TransitionTable {
       if (targets.length === 0) {
         row.push('∅');
       } else if (automaton.type === 'DFA') {
+        if (targets.length > 1) {
+          throw new Error(`Invalid DFA: multiple transitions from state ${state} on symbol ${symbol}`);
+        }
         row.push(targets[0]);
       } else {
-        // NFA: show set notation
-        row.push(`{${targets.join(', ')}}`);
+        // NFA: show set notation, deduplicate, and sort deterministically
+        const uniqueTargets = Array.from(new Set(targets)).sort();
+        row.push(`{${uniqueTargets.join(', ')}}`);
       }
     }
 
     rows.push(row);
   }
+
+  // Sort rows deterministically by the original states array
+  const stateOrder = new Map(automaton.states.map((s, i) => [s, i]));
+  rows.sort((a, b) => {
+    // Extract raw state name by removing markers
+    const getRaw = (lbl: string) => lbl.replace('→', '').replace('*', '');
+    const aRaw = getRaw(a[0]);
+    const bRaw = getRaw(b[0]);
+    const aIdx = stateOrder.get(aRaw) ?? Infinity;
+    const bIdx = stateOrder.get(bRaw) ?? Infinity;
+    return aIdx - bIdx;
+  });
 
   return { headers, rows };
 }

@@ -5,6 +5,26 @@ import { simulateNFA } from './nfa-simulator';
 
 export type OracleFunction = (input: string) => boolean;
 
+function isBinaryAlphabet(alphabet: string[]): boolean {
+  return alphabet.length === 2 && alphabet.includes('0') && alphabet.includes('1');
+}
+
+function countOccurrences(input: string, target?: string): number {
+  if (!target || target === '') return input.length;
+  if (target.length === 1) {
+    let count = 0;
+    for (let i = 0; i < input.length; i++) {
+      if (input[i] === target) count++;
+    }
+    return count;
+  }
+  throw new Error(`Unsupported deterministic count semantics: target length > 1 ("${target}")`);
+}
+
+function isSingleSymbolOrEmpty(target?: string): boolean {
+  return !target || target.length <= 1;
+}
+
 /**
  * Builds a deterministic programmatic oracle for the parsed constraints.
  * This function evaluates a string against all constraints.
@@ -42,45 +62,37 @@ export function buildDeterministicOracle(parseResult: QuestionParseResult): Orac
         evaluators.push(input => input.length <= value);
         break;
       case 'count_exact':
-        evaluators.push(input => {
-          const count = target ? (input.split(target).length - 1) : input.length;
-          return count === value;
-        });
+        if (!isSingleSymbolOrEmpty(c.target)) return null;
+        evaluators.push(input => countOccurrences(input, c.target) === value);
         break;
       case 'count_min':
-        evaluators.push(input => {
-          const count = target ? (input.split(target).length - 1) : input.length;
-          return count >= value;
-        });
+        if (!isSingleSymbolOrEmpty(c.target)) return null;
+        evaluators.push(input => countOccurrences(input, c.target) >= value);
         break;
       case 'count_max':
-        evaluators.push(input => {
-          const count = target ? (input.split(target).length - 1) : input.length;
-          return count <= value;
-        });
+        if (!isSingleSymbolOrEmpty(c.target)) return null;
+        evaluators.push(input => countOccurrences(input, c.target) <= value);
         break;
       case 'parity':
-        evaluators.push(input => {
-          const count = target ? (input.split(target).length - 1) : input.length;
-          // value is usually 0 (even) or 1 (odd)
-          return count % 2 === (value || 0);
-        });
+        if (!isSingleSymbolOrEmpty(c.target)) return null;
+        evaluators.push(input => countOccurrences(input, c.target) % 2 === (value || 0));
         break;
       case 'divisibility':
-        evaluators.push(input => {
-          if (!target && alphabet.includes('0') && alphabet.includes('1') && alphabet.length === 2) {
-            // Binary number divisibility
+        if ((!c.target || c.target === '') && isBinaryAlphabet(alphabet)) {
+          // Binary number divisibility
+          evaluators.push(input => {
             if (input === '') return true; // empty string conceptually 0, divisible by anything
             let num = 0;
             for (let i = 0; i < input.length; i++) {
               num = (num * 2 + (input[i] === '1' ? 1 : 0)) % value;
             }
             return num === 0;
-          }
+          });
+        } else {
           // Otherwise, divisibility of count/length
-          const count = target ? (input.split(target).length - 1) : input.length;
-          return count % value === 0;
-        });
+          if (!isSingleSymbolOrEmpty(c.target)) return null;
+          evaluators.push(input => countOccurrences(input, c.target) % value === 0);
+        }
         break;
       case 'pattern':
         if (target) {
@@ -90,16 +102,13 @@ export function buildDeterministicOracle(parseResult: QuestionParseResult): Orac
             const nfa = astToNFA(ast);
             evaluators.push(input => simulateNFA(nfa, input).accepted);
           } catch {
-            // If regex compilation fails, we can't reliably use it in oracle
             return null;
           }
         }
         break;
       case 'custom':
-        // Custom NLP constraints cannot be deterministically evaluated programmatically
         return null;
       default:
-        // Unknown constraint type
         return null;
     }
   }
@@ -128,6 +137,7 @@ export function buildDeterministicDFA(parseResult: QuestionParseResult): Automat
 
   switch (c.type) {
     case 'parity':
+      if (!isSingleSymbolOrEmpty(c.target)) return null;
       return buildParityDFA(alphabet, target, value);
     case 'starts_with':
       return target.length > 0 ? buildStartsWithDFA(alphabet, target) : null;
@@ -136,7 +146,12 @@ export function buildDeterministicDFA(parseResult: QuestionParseResult): Automat
     case 'contains':
       return target.length > 0 ? buildContainsDFA(alphabet, target) : null;
     case 'divisibility':
-      return buildDivisibilityDFA(alphabet, value, target);
+      if ((!c.target || c.target === '') && isBinaryAlphabet(alphabet)) {
+        return buildDivisibilityDFA(alphabet, value, target);
+      } else if (isSingleSymbolOrEmpty(c.target)) {
+        return buildDivisibilityDFA(alphabet, value, target);
+      }
+      return null;
     default:
       return null;
   }
@@ -197,7 +212,7 @@ function buildStartsWithDFA(alphabet: string[], target: string): Automaton {
 }
 
 function getLongestPrefixSuffixLength(target: string, currentMatch: string): number {
-  for (let len = target.length; len > 0; len--) {
+  for (let len = Math.min(target.length, currentMatch.length); len > 0; len--) {
     if (currentMatch.endsWith(target.slice(0, len))) {
       return len;
     }
@@ -247,7 +262,7 @@ function buildContainsDFA(alphabet: string[], target: string): Automaton {
 function buildDivisibilityDFA(alphabet: string[], value: number, target: string): Automaton | null {
   if (value <= 0) return null;
 
-  const isNumeric = !target && alphabet.includes('0') && alphabet.includes('1') && alphabet.length === 2;
+  const isNumeric = (!target || target === '') && isBinaryAlphabet(alphabet);
   const states = Array.from({ length: value }, (_, i) => `q${i}`);
   const transitions: Automaton['transitions'] = [];
 

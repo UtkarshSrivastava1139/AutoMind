@@ -1,4 +1,6 @@
 import type { Automaton } from '@automind/schemas';
+import { isCompleteDFA } from './validator';
+import { completeDFA, proveDFAEquivalence } from './question-verifier';
 
 export interface DFAMinimizationStep {
   stepNumber: number;
@@ -13,14 +15,17 @@ export function minimizeDFA(dfa: Automaton): { minDfa: Automaton; steps: DFAMini
 
   const steps: DFAMinimizationStep[] = [];
   
-  // 1. Remove unreachable states
+  // 1. Ensure DFA is complete before minimization
+  const completeInputDfa = isCompleteDFA(dfa) ? dfa : completeDFA(dfa);
+
+  // 2. Remove unreachable states
   const reachable = new Set<string>();
-  const queue = [dfa.startState];
-  reachable.add(dfa.startState);
+  const queue = [completeInputDfa.startState];
+  reachable.add(completeInputDfa.startState);
 
   while (queue.length > 0) {
     const current = queue.shift()!;
-    const outgoing = dfa.transitions.filter(t => t.from === current);
+    const outgoing = completeInputDfa.transitions.filter(t => t.from === current);
     for (const transition of outgoing) {
       if (!reachable.has(transition.to)) {
         reachable.add(transition.to);
@@ -29,8 +34,16 @@ export function minimizeDFA(dfa: Automaton): { minDfa: Automaton; steps: DFAMini
     }
   }
 
-  // 2. Initialize partitions
-  const acceptSet = new Set(dfa.acceptStates.filter(s => reachable.has(s)));
+  // A completely safe, reachable, and completed reference DFA for final equivalence
+  const referenceDfa: Automaton = {
+    ...completeInputDfa,
+    states: completeInputDfa.states.filter(s => reachable.has(s)),
+    transitions: completeInputDfa.transitions.filter(t => reachable.has(t.from) && reachable.has(t.to)),
+    acceptStates: completeInputDfa.acceptStates.filter(s => reachable.has(s))
+  };
+
+  // 3. Initialize partitions
+  const acceptSet = new Set(referenceDfa.acceptStates);
   const nonAcceptSet = new Set([...reachable].filter(s => !acceptSet.has(s)));
 
   let partitions = [acceptSet, nonAcceptSet].filter(p => p.size > 0);
@@ -38,10 +51,10 @@ export function minimizeDFA(dfa: Automaton): { minDfa: Automaton; steps: DFAMini
   steps.push({
     stepNumber: 1,
     partitions: partitions.map(p => Array.from(p).sort()),
-    description: 'Initial partitions: Accept and Non-Accept states'
+    description: 'Initial partitions: Accept and Non-Accept reachable states'
   });
 
-  // 3. Refine partitions
+  // 4. Refine partitions
   let changed = true;
   let stepCount = 1;
   while (changed) {
@@ -54,22 +67,16 @@ export function minimizeDFA(dfa: Automaton): { minDfa: Automaton; steps: DFAMini
         continue;
       }
 
-      // We need to split the partition if elements go to different target partitions
       // Map: serialized target partitions -> subset of states
       const splitMap = new Map<string, Set<string>>();
 
       for (const state of partition) {
-        // signature is a string representing which partition each symbol goes to
         const signatureParts = [];
-        for (const symbol of dfa.alphabet) {
-          const transition = dfa.transitions.find(t => t.from === state && t.symbol === symbol);
-          if (!transition) {
-            signatureParts.push('-1'); // Dead/missing transition
-          } else {
-            const target = transition.to;
-            const targetPartitionIndex = partitions.findIndex(p => p.has(target));
-            signatureParts.push(targetPartitionIndex.toString());
-          }
+        for (const symbol of referenceDfa.alphabet) {
+          const transition = referenceDfa.transitions.find(t => t.from === state && t.symbol === symbol)!;
+          const target = transition.to;
+          const targetPartitionIndex = partitions.findIndex(p => p.has(target));
+          signatureParts.push(targetPartitionIndex.toString());
         }
         
         const signature = signatureParts.join(',');
@@ -95,18 +102,17 @@ export function minimizeDFA(dfa: Automaton): { minDfa: Automaton; steps: DFAMini
       steps.push({
         stepNumber: stepCount,
         partitions: partitions.map(p => Array.from(p).sort()),
-        description: 'Refined partitions'
+        description: 'Refined partitions based on transition targets'
       });
     }
   }
 
-  // 4. Build Minimized DFA
+  // 5. Build Minimized DFA
   const minStates: string[] = [];
   const minAcceptStates: string[] = [];
   let minStartState = '';
   const minTransitions: Automaton['transitions'] = [];
   
-  // Mapping from original state to new representative state
   const stateRepMap = new Map<string, string>();
 
   partitions.forEach((partition, index) => {
@@ -115,43 +121,44 @@ export function minimizeDFA(dfa: Automaton): { minDfa: Automaton; steps: DFAMini
     
     partition.forEach(state => {
       stateRepMap.set(state, repName);
-      if (state === dfa.startState) {
+      if (state === referenceDfa.startState) {
         minStartState = repName;
       }
-      if (dfa.acceptStates.includes(state) && !minAcceptStates.includes(repName)) {
+      if (referenceDfa.acceptStates.includes(state) && !minAcceptStates.includes(repName)) {
         minAcceptStates.push(repName);
       }
     });
   });
 
-  // Build transitions
   partitions.forEach((partition, index) => {
     const repName = `m${index}`;
-    const sampleState = Array.from(partition)[0]; // Use first element as sample
+    const sampleState = Array.from(partition)[0]; 
 
-    for (const symbol of dfa.alphabet) {
-      const transition = dfa.transitions.find(t => t.from === sampleState && t.symbol === symbol);
-      if (transition) {
-        const targetRep = stateRepMap.get(transition.to);
-        if (targetRep) {
-          minTransitions.push({
-            from: repName,
-            to: targetRep,
-            symbol
-          });
-        }
-      }
+    for (const symbol of referenceDfa.alphabet) {
+      const transition = referenceDfa.transitions.find(t => t.from === sampleState && t.symbol === symbol)!;
+      const targetRep = stateRepMap.get(transition.to)!;
+      minTransitions.push({
+        from: repName,
+        to: targetRep,
+        symbol
+      });
     }
   });
 
   const minDfa: Automaton = {
     type: 'DFA',
     states: minStates,
-    alphabet: dfa.alphabet,
+    alphabet: referenceDfa.alphabet,
     startState: minStartState,
     acceptStates: minAcceptStates,
     transitions: minTransitions
   };
+
+  // 6. Safety check: ensure the minimized DFA is mathematically equivalent to the reachable completed input
+  const eqCheck = proveDFAEquivalence(referenceDfa, minDfa);
+  if (!eqCheck.equivalent) {
+    throw new Error(`Minimization produced an inequivalent machine! Counterexample: "${eqCheck.counterexample}"`);
+  }
 
   return { minDfa, steps };
 }

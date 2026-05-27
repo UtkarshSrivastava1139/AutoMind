@@ -15,6 +15,7 @@ import type {
   Automaton,
   AmbiguityFlag,
   TaskClassification,
+  RunMetrics,
 } from '@automind/schemas';
 import { AutomatonSchema } from '@automind/schemas';
 import { classifyQuestion, extractConstraints, detectAmbiguities } from './question-parser';
@@ -32,6 +33,9 @@ import {
   buildDeterministicOracle,
   buildDeterministicDFA,
   lookupCanonicalCache,
+  checkConstraintSAT,
+  buildMemoryReachableDFA,
+  minimizeDFA,
 } from '@automind/engine';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -161,21 +165,83 @@ async function solveBuildDFA(
   // Tier 1: Canonical Cache
   const cached = lookupCanonicalCache(questionText, parseResult.alphabet);
   if (cached) {
+    const vStart = Date.now();
     const verification = verifyCandidateAutomaton(cached, parseResult);
-    return buildVerifiedResult(cached, parseResult, verification);
+    const vTime = Date.now() - vStart;
+    const metrics: RunMetrics = {
+      statesBeforeMinimization: cached.states.length,
+      statesAfterMinimization: cached.states.length,
+      compositionTimeMs: 0,
+      verificationTimeMs: vTime,
+      tierUsed: 'cache',
+      fallbackTriggered: false
+    };
+    return buildVerifiedResult(cached, parseResult, verification, metrics);
+  }
+
+  // SAT Check
+  const satCheck = checkConstraintSAT(parseResult.atomicConstraints);
+  if (!satCheck.isSatisfiable) {
+    return {
+      success: false,
+      error: `Logical Contradiction Detected: ${satCheck.contradictionReason}. This language is mathematically impossible to construct.`,
+      stage: 'generate'
+    };
   }
 
   // Tier 2: Deterministic Construction
-  const deterministicDFA = buildDeterministicDFA(parseResult);
+  let deterministicDFA: Automaton | null = null;
+  let fallbackTriggered = false;
+  let fallbackReason: string | undefined = undefined;
+
+  const compStart = Date.now();
+  if (parseResult.atomicConstraints.length === 1) {
+    deterministicDFA = buildDeterministicDFA(parseResult);
+  } else if (parseResult.atomicConstraints.length > 1) {
+    const hasUnsupported = parseResult.atomicConstraints.some(c => c.type === 'custom' || c.type === 'pattern');
+    if (!hasUnsupported) {
+      try {
+        deterministicDFA = buildMemoryReachableDFA(
+          parseResult.alphabet,
+          parseResult.atomicConstraints,
+          parseResult.constraintExpressionTree,
+          64
+        );
+      } catch (e) {
+        fallbackTriggered = true;
+        fallbackReason = e instanceof Error ? e.message : String(e);
+      }
+    } else {
+      fallbackTriggered = true;
+      fallbackReason = 'Cannot deterministically construct product with custom or pattern constraints';
+    }
+  }
+
   if (deterministicDFA) {
+    const statesBefore = deterministicDFA.states.length;
+    deterministicDFA = minimizeDFA(deterministicDFA).minDfa;
+    const statesAfter = deterministicDFA.states.length;
+    const compTime = Date.now() - compStart;
+
+    const vStart = Date.now();
     const verification = verifyCandidateAutomaton(deterministicDFA, parseResult);
-    return buildVerifiedResult(deterministicDFA, parseResult, verification);
+    const vTime = Date.now() - vStart;
+
+    const metrics: RunMetrics = {
+      statesBeforeMinimization: statesBefore,
+      statesAfterMinimization: statesAfter,
+      compositionTimeMs: compTime,
+      verificationTimeMs: vTime,
+      tierUsed: 'deterministic',
+      fallbackTriggered: false
+    };
+
+    return buildVerifiedResult(deterministicDFA, parseResult, verification, metrics);
   }
 
   // Tier 3: Programmatic Oracle Seeding
   const oracle = buildDeterministicOracle(parseResult);
   if (oracle) {
-    // We can clear and perfectly regenerate positive/negative examples
     parseResult.positiveExamples = [];
     parseResult.negativeExamples = [];
     
@@ -184,10 +250,9 @@ async function solveBuildDFA(
       target: c.target ?? undefined,
       value: c.value ?? undefined,
     }));
-    // We can generate more strings now that we have a fast perfect oracle
     const edgeCases = [
       ...generateEdgeCaseStrings(parseResult.alphabet, mappedConstraints),
-      ...generateTestStrings(parseResult.alphabet, 4) // Add all short strings to examples
+      ...generateTestStrings(parseResult.alphabet, 4)
     ];
     
     const uniqueEdges = Array.from(new Set(edgeCases));
@@ -216,7 +281,6 @@ async function solveBuildDFA(
           }
         }
       } catch (e) {
-        // Regex parsing failed, ignore
       }
     }
   }
@@ -225,29 +289,44 @@ async function solveBuildDFA(
   const MAX_ATTEMPTS = 3;
   let bestCandidate = null;
   let bestVerification = null;
+  let bestMetrics: RunMetrics | undefined = undefined;
   let counterexamples: string[] = [];
+  
+  const llmStart = Date.now();
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const candidate = await requestDFACandidate(client, parseResult, counterexamples);
     if (!candidate.success) {
       if (attempt === 0) return { success: false, error: candidate.error, stage: 'generate' };
-      break; // Return the best we have so far
+      break;
     }
 
+    const vStart = Date.now();
     const verification = verifyCandidateAutomaton(candidate.automaton, parseResult, oracle || undefined);
+    const vTime = Date.now() - vStart;
+    
+    const metrics: RunMetrics = {
+      statesBeforeMinimization: candidate.automaton.states.length,
+      statesAfterMinimization: candidate.automaton.states.length,
+      compositionTimeMs: Date.now() - llmStart,
+      verificationTimeMs: vTime,
+      tierUsed: 'llm',
+      fallbackTriggered,
+      fallbackReason
+    };
     
     if (verification.passed) {
-      return buildVerifiedResult(candidate.automaton, parseResult, verification);
+      return buildVerifiedResult(candidate.automaton, parseResult, verification, metrics);
     }
 
     bestCandidate = candidate.automaton;
     bestVerification = verification;
+    bestMetrics = metrics;
 
-    // Provide up to 5 counterexamples for the next attempt
     counterexamples = verification.counterexamples.slice(0, 5);
   }
 
-  return buildUnverifiedResult(bestCandidate!, parseResult, bestVerification!);
+  return buildUnverifiedResult(bestCandidate!, parseResult, bestVerification!, bestMetrics);
 }
 
 async function requestDFACandidate(
@@ -382,7 +461,8 @@ function extractRegexFromParseResult(parseResult: QuestionParseResult): string |
 function buildVerifiedResult(
   automaton: Automaton,
   parseResult: QuestionParseResult,
-  verification: { positiveResults: any[]; negativeResults: any[]; counterexamples: string[] }
+  verification: { positiveResults: any[]; negativeResults: any[]; counterexamples: string[] },
+  metrics?: RunMetrics
 ): SolveStageResult {
   const table = buildTransitionTable(automaton);
   const diagramData = automatonToDiagramData(automaton);
@@ -398,6 +478,7 @@ function buildVerifiedResult(
       negativeTests: verification.negativeResults,
       counterexamples: [],
       candidatesEvaluated: 1,
+      metrics,
     },
   };
 }
@@ -405,7 +486,8 @@ function buildVerifiedResult(
 function buildUnverifiedResult(
   automaton: Automaton,
   parseResult: QuestionParseResult,
-  verification: { positiveResults: any[]; negativeResults: any[]; counterexamples: string[]; rejectionReason?: string }
+  verification: { positiveResults: any[]; negativeResults: any[]; counterexamples: string[]; rejectionReason?: string },
+  metrics?: RunMetrics
 ): SolveStageResult {
   const table = buildTransitionTable(automaton);
   const diagramData = automatonToDiagramData(automaton);
@@ -421,6 +503,7 @@ function buildUnverifiedResult(
       negativeTests: verification.negativeResults,
       counterexamples: verification.counterexamples,
       candidatesEvaluated: 2,
+      metrics,
     },
   };
 }

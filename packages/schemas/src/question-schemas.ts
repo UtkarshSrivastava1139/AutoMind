@@ -49,6 +49,39 @@ export const AtomicConstraintSchema = z.object({
 export type AtomicConstraint = z.infer<typeof AtomicConstraintSchema>;
 
 // ============================================================
+// State Semantics
+// ============================================================
+
+export const StateVectorSchema = z.record(z.string(), z.any());
+export type StateVector = z.infer<typeof StateVectorSchema>;
+
+// ============================================================
+// Boolean AST Expression
+// ============================================================
+
+export const BooleanExprSchema: z.ZodType<any> = z.lazy(() => z.union([
+  z.object({
+    operator: z.enum(['AND', 'OR', 'XOR']),
+    left: BooleanExprSchema,
+    right: BooleanExprSchema,
+  }),
+  z.object({
+    operator: z.literal('NOT'),
+    child: BooleanExprSchema,
+  }),
+  z.string() // refers to a constraint description
+]));
+
+export type BooleanExpr = {
+  operator: 'AND' | 'OR' | 'XOR';
+  left: BooleanExpr;
+  right: BooleanExpr;
+} | {
+  operator: 'NOT';
+  child: BooleanExpr;
+} | string;
+
+// ============================================================
 // Ambiguity Flags
 // ============================================================
 
@@ -80,6 +113,7 @@ export const QuestionParseResultSchema = z.object({
   alphabet: z.array(z.string()),
   languageDescription: z.string(),
   atomicConstraints: z.array(AtomicConstraintSchema),
+  constraintExpressionTree: BooleanExprSchema.optional(),
   positiveExamples: z.array(z.string()),
   negativeExamples: z.array(z.string()),
   assumptions: z.array(z.string()),
@@ -127,6 +161,17 @@ export type TransitionTable = z.infer<typeof TransitionTableSchema>;
 
 export const VerificationStatusSchema = z.enum(['verified', 'partial', 'unverified']);
 
+export const RunMetricsSchema = z.object({
+  statesBeforeMinimization: z.number(),
+  statesAfterMinimization: z.number(),
+  compositionTimeMs: z.number(),
+  verificationTimeMs: z.number(),
+  tierUsed: z.enum(['cache', 'deterministic', 'oracle_seed', 'llm']),
+  fallbackTriggered: z.boolean(),
+  fallbackReason: z.string().optional()
+});
+export type RunMetrics = z.infer<typeof RunMetricsSchema>;
+
 export const QuestionSolveResultSchema = z.object({
   status: VerificationStatusSchema,
   automaton: z.object({
@@ -152,6 +197,7 @@ export const QuestionSolveResultSchema = z.object({
   counterexamples: z.array(z.string()),
   candidatesEvaluated: z.number(),
   explanation: z.string().optional(),
+  metrics: RunMetricsSchema.optional(),
 });
 export type QuestionSolveResult = z.infer<typeof QuestionSolveResultSchema>;
 
