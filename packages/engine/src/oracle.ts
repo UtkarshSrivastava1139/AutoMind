@@ -9,7 +9,7 @@ function isBinaryAlphabet(alphabet: string[]): boolean {
   return alphabet.length === 2 && alphabet.includes('0') && alphabet.includes('1');
 }
 
-function countOccurrences(input: string, target?: string): number {
+function countOccurrences(input: string, target?: string | null): number {
   if (!target || target === '') return input.length;
   if (target.length === 1) {
     let count = 0;
@@ -21,7 +21,7 @@ function countOccurrences(input: string, target?: string): number {
   throw new Error(`Unsupported deterministic count semantics: target length > 1 ("${target}")`);
 }
 
-function isSingleSymbolOrEmpty(target?: string): boolean {
+function isSingleSymbolOrEmpty(target?: string | null): boolean {
   return !target || target.length <= 1;
 }
 
