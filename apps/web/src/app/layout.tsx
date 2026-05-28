@@ -53,6 +53,8 @@ export const metadata: Metadata = {
 
 import { GlobalLayoutWrapper } from "@/components/shared/GlobalLayoutWrapper";
 
+import { Analytics } from "@vercel/analytics/next";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -65,6 +67,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col antialiased overflow-y-auto">
         <GlobalLayoutWrapper>{children}</GlobalLayoutWrapper>
+        <Analytics />
       </body>
     </html>
   );

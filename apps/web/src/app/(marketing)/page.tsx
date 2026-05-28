@@ -123,14 +123,16 @@ export default function HomePage() {
           </span>
         </div>
         <div className="flex items-center gap-5">
+          {/* Sign In temporarily hidden as auth is not established yet
           <Link
             href="/login"
             className="text-sm font-semibold text-slate-400 hover:text-white transition-colors"
           >
             Sign in
           </Link>
+          */}
           <Link
-            href="/signup"
+            href="/dashboard"
             className="px-4 py-2 text-xs font-bold text-white rounded-lg bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 hover:border-indigo-400/50 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300 hover:-translate-y-0.5"
           >
             Get Started Free
@@ -406,11 +408,10 @@ function HeroSection() {
                         {simString.split("").map((c, i) => (
                           <span
                             key={i}
-                            className={`px-0.5 rounded transition-all duration-200 ${
-                              i === simCharIndex
-                                ? "bg-indigo-500 text-white font-bold scale-110"
-                                : "text-slate-400"
-                            }`}
+                            className={`px-0.5 rounded transition-all duration-200 ${i === simCharIndex
+                              ? "bg-indigo-500 text-white font-bold scale-110"
+                              : "text-slate-400"
+                              }`}
                           >
                             {c}
                           </span>
@@ -786,11 +787,10 @@ function QSolverSection() {
                 onClick={() =>
                   handleSelectMock(item.id as keyof typeof QSOLVER_MOCKS)
                 }
-                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
-                  selectedMock === item.id
-                    ? "bg-indigo-500/10 border-indigo-500/30"
-                    : "bg-slate-900/50 border-white/5 hover:border-white/10 hover:bg-slate-900"
-                }`}
+                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between group ${selectedMock === item.id
+                  ? "bg-indigo-500/10 border-indigo-500/30"
+                  : "bg-slate-900/50 border-white/5 hover:border-white/10 hover:bg-slate-900"
+                  }`}
               >
                 <div>
                   <div className="text-xs font-mono font-bold text-white group-hover:text-indigo-400 transition-colors">
@@ -1176,23 +1176,23 @@ function SocialProofSection() {
     {
       quote:
         "I was struggling with NFA to DFA conversion in my TAFL exam prep. AutoMind's QSolver literally saved my semester. I typed the question and got a verified diagram in seconds.",
-      name: "Priya Sharma",
-      role: "B.Tech CSE, 3rd Year",
-      university: "DTU, Delhi",
+      name: "Utkarsh Srivastava",
+      role: "B.Tech, 2nd Year",
+      university: "JSS University, Noida",
     },
     {
       quote:
         "The visual simulator is exactly what I wished existed when I was learning Thompson's construction. Being able to step through input strings state-by-state makes everything click.",
-      name: "Arjun Mehta",
-      role: "B.Tech IT, 4th Year",
-      university: "NSUT, Delhi",
+      name: "Sanchita Singh",
+      role: "B.Tech, 2nd Year",
+      university: "JSS University, Noida",
     },
     {
       quote:
-        "I showed AutoMind to my professor and she was impressed by the regex conversion pipeline. Now the whole class uses it as a companion tool alongside lectures.",
-      name: "Sneha Gupta",
-      role: "B.Tech CSE, 3rd Year",
-      university: "IGDTUW, Delhi",
+        "I showed AutoMind to my professor and he was impressed by the regex conversion pipeline. Now the whole class uses it as a companion tool alongside lectures.",
+      name: "Yash Gupta",
+      role: "B.Tech, 2nd Year",
+      university: "JSS University, Noida",
     },
   ];
 
@@ -1457,17 +1457,17 @@ function FinalCTASection() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
           <Link
-            href="/signup"
+            href="/dashboard"
             className="w-full sm:w-auto px-8 py-3.5 font-semibold text-sm rounded-xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-all duration-200 flex items-center justify-center gap-2"
           >
             Get Started Free
             <ArrowRight size={14} />
           </Link>
           <Link
-            href="/dashboard"
+            href="/question-solver"
             className="w-full sm:w-auto px-8 py-3.5 font-semibold text-sm rounded-xl bg-slate-900 border border-white/5 hover:border-white/10 transition-all duration-200"
           >
-            Explore Workspace
+            Try QSolver
           </Link>
         </div>
       </div>
