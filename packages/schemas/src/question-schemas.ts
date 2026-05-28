@@ -192,6 +192,23 @@ export const QuestionSolveResultSchema = z.object({
     nodes: z.array(z.any()),
     edges: z.array(z.any()),
   }).optional(),
+  minimizedAutomaton: z.object({
+    type: z.enum(['DFA', 'NFA']),
+    states: z.array(z.string()),
+    alphabet: z.array(z.string()),
+    startState: z.string(),
+    acceptStates: z.array(z.string()),
+    transitions: z.array(z.object({
+      from: z.string(),
+      to: z.string(),
+      symbol: z.string(),
+    })),
+  }).optional(),
+  minimizedTransitionTable: TransitionTableSchema.optional(),
+  minimizedDiagramData: z.object({
+    nodes: z.array(z.any()),
+    edges: z.array(z.any()),
+  }).optional(),
   positiveTests: z.array(TestCaseResultSchema),
   negativeTests: z.array(TestCaseResultSchema),
   counterexamples: z.array(z.string()),

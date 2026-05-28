@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from 'react';
 import { useQuestionStore } from '@web/store/useQuestionStore';
@@ -7,21 +7,30 @@ import { GitGraph, CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-reac
 
 export function SolutionDiagram(props: { style?: React.CSSProperties }) {
   const { solveResult } = useQuestionStore();
+  const [viewMode, setViewMode] = useState<'raw' | 'minimized'>('raw');
   const [layoutedNodes, setLayoutedNodes] = useState<any[]>([]);
   const [layoutedEdges, setLayoutedEdges] = useState<any[]>([]);
 
   useEffect(() => {
-    if (solveResult?.diagramData) {
-      getLayoutedElements(solveResult.diagramData.nodes, solveResult.diagramData.edges).then(({ nodes, edges }) => {
-        setLayoutedNodes(nodes);
-        setLayoutedEdges(edges);
-      });
+    if (solveResult) {
+      const data = viewMode === 'minimized' && solveResult.minimizedDiagramData
+        ? solveResult.minimizedDiagramData
+        : solveResult.diagramData;
+        
+      if (data) {
+        getLayoutedElements(data.nodes, data.edges).then(({ nodes, edges }) => {
+          setLayoutedNodes(nodes);
+          setLayoutedEdges(edges);
+        });
+      }
     }
-  }, [solveResult?.diagramData]);
+  }, [solveResult, viewMode]);
 
   if (!solveResult?.diagramData || !solveResult?.automaton || layoutedNodes.length === 0) return null;
 
-  const { automaton } = solveResult;
+  const automaton = viewMode === 'minimized' && solveResult.minimizedAutomaton
+    ? solveResult.minimizedAutomaton
+    : solveResult.automaton;
 
   // Calculate bounding box for SVG view to center it
   const xs = layoutedNodes.map((n) => n.position.x);
@@ -59,18 +68,35 @@ export function SolutionDiagram(props: { style?: React.CSSProperties }) {
               )}
             </span>
           </h3>
-          <span className="automaton-type-badge">{automaton.type}</span>
+          {solveResult.minimizedAutomaton ? (
+            <div className="flex bg-bg-app border border-border rounded-lg p-0.5 ml-2" data-html2canvas-ignore>
+              <button
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === 'raw' ? 'bg-primary/20 text-primary-light' : 'text-text-muted hover:text-text-primary'}`}
+                onClick={() => setViewMode('raw')}
+              >
+                Raw NFA
+              </button>
+              <button
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === 'minimized' ? 'bg-primary/20 text-primary-light' : 'text-text-muted hover:text-text-primary'}`}
+                onClick={() => setViewMode('minimized')}
+              >
+                Minimized DFA
+              </button>
+            </div>
+          ) : (
+            <span className="automaton-type-badge">{automaton.type}</span>
+          )}
         </div>
         <button 
-          className="btn btn-secondary btn-sm"
+          className="btn btn-sm shadow-[0_0_15px_rgba(99,102,241,0.5)] bg-primary text-bg-app hover:bg-primary-light hover:-translate-y-0.5 transition-all duration-300"
           onClick={() => {
             localStorage.setItem('automind_pending_import', JSON.stringify(automaton));
             window.open('/simulator', '_blank');
           }}
-          style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}
           data-html2canvas-ignore
         >
-          Open in Simulator <ExternalLink size={14} />
+          Open in Simulator <ExternalLink size={16} />
         </button>
       </div>
 

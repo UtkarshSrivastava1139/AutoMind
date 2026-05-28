@@ -36,6 +36,7 @@ import {
   checkConstraintSAT,
   buildMemoryReachableDFA,
   minimizeDFA,
+  convertNfaToDfa,
 } from '@automind/engine';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -406,6 +407,12 @@ function solveRegexToNFA(
     const table = buildTransitionTable(nfa);
     const diagramData = automatonToDiagramData(nfa);
 
+    // Compute Minimized DFA
+    const { dfa } = convertNfaToDfa(nfa);
+    const minDfa = minimizeDFA(dfa).minDfa;
+    const minimizedTable = buildTransitionTable(minDfa);
+    const minimizedDiagramData = automatonToDiagramData(minDfa);
+
     return {
       success: true,
       result: {
@@ -414,6 +421,9 @@ function solveRegexToNFA(
         regex: regexPattern,
         transitionTable: table,
         diagramData,
+        minimizedAutomaton: minDfa,
+        minimizedTransitionTable: minimizedTable,
+        minimizedDiagramData,
         positiveTests: verification.positiveResults,
         negativeTests: verification.negativeResults,
         counterexamples: verification.counterexamples,

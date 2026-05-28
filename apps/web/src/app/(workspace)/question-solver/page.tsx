@@ -7,6 +7,7 @@ import { SolutionDiagram } from '@web/components/question-solver/SolutionDiagram
 import { TransitionTableView } from '@web/components/question-solver/TransitionTableView';
 import { TestCasePanel } from '@web/components/question-solver/TestCasePanel';
 import { ExplanationPanel } from '@web/components/question-solver/ExplanationPanel';
+import { AutomataLoader } from '@web/components/ui/AutomataLoader';
 import { PencilLoader } from '@web/components/ui/PencilLoader';
 import { AlertTriangle, CheckCircle2, PenLine, Cpu } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -43,6 +44,13 @@ export default function QuestionSolverPage() {
 
       // Create a clean clone for PDF export (avoid React Flow and other interactive elements)
       const clone = element.cloneNode(true) as HTMLElement;
+      clone.id = 'pdf-export-wrapper-clone';
+      
+      // Append clone to body off-screen so CSS variables compute correctly for SVG
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      document.body.appendChild(clone);
       
       // Remove any interactive elements that don't render well in PDF
       clone.querySelectorAll('[data-html2canvas-ignore]').forEach(el => el.remove());
@@ -76,7 +84,10 @@ export default function QuestionSolverPage() {
           useCORS: true, 
           backgroundColor: '#0f172a', // Use dark background for PDF to match app theme
           logging: false,
-          allowTaint: true
+          allowTaint: true,
+          windowWidth: document.documentElement.offsetWidth,
+          windowHeight: document.documentElement.offsetHeight,
+          scrollY: -window.scrollY
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
         pagebreak: { mode: ['css', 'legacy'] }
@@ -123,6 +134,11 @@ export default function QuestionSolverPage() {
       // Fallback to native print
       setTimeout(() => window.print(), 500);
     } finally {
+      // Cleanup the appended clone
+      const appendedClone = document.getElementById('pdf-export-wrapper-clone');
+      if (appendedClone && document.body.contains(appendedClone)) {
+        document.body.removeChild(appendedClone);
+      }
       setIsExporting(false);
     }
   };
@@ -206,6 +222,16 @@ export default function QuestionSolverPage() {
               <p className="text-xs text-text-muted text-center px-4">Deterministic engine generates & validates the model.</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Analyzing/Parsing State */}
+      {status === 'parsing' && (
+        <div className="mt-6 p-12 glass-card rounded-2xl border border-border shadow-2xl bg-bg-app flex flex-col items-center justify-center min-h-[300px]">
+          <AutomataLoader />
+          <p className="mt-8 text-primary font-semibold tracking-wide animate-pulse text-lg">
+            Analyzing question and extracting parameters...
+          </p>
         </div>
       )}
 

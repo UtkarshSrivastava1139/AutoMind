@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     
     // We use a faster model for UI responsiveness
     const messages = [
-      { role: 'system' as const, content: AI_LAYOUT_PROMPT.replace('{{automatonJson}}', JSON.stringify(automaton, null, 2)) }
+      { role: 'system' as const, content: AI_LAYOUT_PROMPT.replace('{{automatonJson}}', JSON.stringify(automaton, null, 2)) },
+      { role: 'user' as const, content: 'Generate the JSON layout.' }
     ];
 
     const result = await client.chat(messages, { 

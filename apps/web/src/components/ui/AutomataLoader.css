@@ -1,0 +1,119 @@
+.automata-loader-container {
+  position: relative;
+  width: 280px;
+  height: 140px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.automata-loader {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.automata-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.state {
+  fill: var(--color-bg-app, #1e293b);
+  stroke: var(--color-border, #334155);
+  stroke-width: 2.5;
+  transition: all 0.3s ease;
+}
+
+.state-text {
+  fill: var(--color-text-muted, #94a3b8);
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  transition: fill 0.3s ease;
+}
+
+.transition {
+  stroke: var(--color-border, #334155);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+}
+
+.arrow-head-default {
+  fill: var(--color-border, #334155);
+}
+
+.arrow-head-active {
+  fill: var(--color-primary, #6366f1);
+  filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.8));
+}
+
+/* Animations */
+@keyframes statePulse {
+  0%, 100% {
+    fill: var(--color-bg-app, #1e293b);
+    stroke: var(--color-border, #334155);
+    filter: drop-shadow(0 0 0px transparent);
+  }
+  30%, 70% {
+    fill: rgba(99, 102, 241, 0.2);
+    stroke: var(--color-primary, #6366f1);
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.6));
+  }
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    fill: var(--color-text-muted, #94a3b8);
+  }
+  30%, 70% {
+    fill: var(--color-primary-light, #818cf8);
+  }
+}
+
+@keyframes drawLine {
+  0% {
+    stroke-dashoffset: 20;
+    stroke: var(--color-border, #334155);
+  }
+  30%, 70% {
+    stroke-dashoffset: 0;
+    stroke: var(--color-primary, #6366f1);
+    filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.6));
+  }
+  100% {
+    stroke-dashoffset: -20;
+    stroke: var(--color-border, #334155);
+  }
+}
+
+/* Base timings */
+.q0, .q0 + .state-text { animation: statePulse 2.5s infinite 0s, textPulse 2.5s infinite 0s; }
+.t1 { animation: drawLine 2.5s infinite 0.5s; }
+.q1, .q1 + .state-text { animation: statePulse 2.5s infinite 1s, textPulse 2.5s infinite 1s; }
+.t2 { animation: drawLine 2.5s infinite 1.5s; }
+.q2, .q2 + .state-text { animation: statePulse 2.5s infinite 2s, textPulse 2.5s infinite 2s; }
+.q2-inner { fill: none; stroke: var(--color-border, #334155); stroke-width: 2.5; animation: statePulse 2.5s infinite 2s; }
+
+.scanning-line {
+  position: absolute;
+  top: 10%;
+  left: 0;
+  width: 3px;
+  height: 80%;
+  background: var(--color-primary, #6366f1);
+  box-shadow: 0 0 20px 5px rgba(99, 102, 241, 0.5);
+  animation: scan 2.5s ease-in-out infinite alternate;
+  z-index: 10;
+  border-radius: 5px;
+}
+
+@keyframes scan {
+  0% { left: 10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 90%; opacity: 0; }
+}
