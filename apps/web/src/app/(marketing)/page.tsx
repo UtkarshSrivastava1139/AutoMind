@@ -303,7 +303,7 @@ function HeroSection() {
           {/* Social proof badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
             <Users size={12} />
-            Trusted by students across 50+ universities
+            Built by a student. Trusted by students.
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-[1.08]">
