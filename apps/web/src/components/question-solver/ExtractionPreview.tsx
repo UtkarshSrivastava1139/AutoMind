@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useQuestionStore } from '@web/store/useQuestionStore';
 import { ClipboardList, AlertTriangle, ArrowRight } from 'lucide-react';
@@ -28,7 +28,7 @@ export function ExtractionPreview() {
       </div>
 
       <div className="p-5 flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <span className="text-xs uppercase font-semibold text-text-muted tracking-wider">Task Type</span>
             <span className="text-sm font-medium bg-bg-card px-2 py-1 rounded inline-block w-fit border border-border shadow-sm">{taskType}</span>

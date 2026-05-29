@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from 'react';
 import { useQuestionStore } from '@web/store/useQuestionStore';
@@ -46,7 +46,7 @@ export function SolutionDiagram(props: { style?: React.CSSProperties }) {
 
   return (
     <div className="w-full h-full flex flex-col" style={props?.style}>
-      <div className="flex justify-between items-center bg-bg-card/50 px-5 py-4 border-b border-border w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-bg-card/50 px-5 py-4 border-b border-border w-full">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <h3 className="panel-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <GitGraph className="text-primary" size={20} />

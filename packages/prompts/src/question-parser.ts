@@ -120,6 +120,84 @@ export async function extractConstraints(
   return validateParseResult(parsed.data);
 }
 
+/**
+ * Normalize constraints to fix common LLM extraction mistakes.
+ * This runs AFTER Zod validation so we know the shape is correct.
+ */
+function normalizeConstraints(result: QuestionParseResult): QuestionParseResult {
+  const normalized = { ...result };
+  const newConstraints: typeof result.atomicConstraints = [];
+
+  for (const c of result.atomicConstraints) {
+    const fixed = { ...c };
+
+    // ── Fix target field: strip trailing "'s", "s", or word prefixes ──
+    if (fixed.target) {
+      // "a's" → "a", "b's" → "b"
+      fixed.target = fixed.target.replace(/'s$/i, '');
+      // "letter a" → "a", "symbol b" → "b"
+      fixed.target = fixed.target.replace(/^(letter|symbol|char)\s+/i, '');
+      fixed.target = fixed.target.trim();
+    }
+
+    // ── Fix parity value: LLM sometimes uses 2 for even instead of 0 ──
+    if (fixed.type === 'parity') {
+      if (fixed.value !== 0 && fixed.value !== 1) {
+        // Guess from description
+        const desc = (fixed.description || '').toLowerCase();
+        if (desc.includes('even')) {
+          fixed.value = 0;
+        } else if (desc.includes('odd')) {
+          fixed.value = 1;
+        } else {
+          // Default: treat any even number as "even parity", odd as "odd parity"
+          fixed.value = (fixed.value ?? 0) % 2 === 0 ? 0 : 1;
+        }
+      }
+    }
+
+    // ── Upgrade mistyped constraints ──
+    // "count_exact" with value 0 and description mentioning "even" → parity
+    if (fixed.type === 'divisibility' && fixed.value === 2) {
+      const desc = (fixed.description || '').toLowerCase();
+      if (desc.includes('even')) {
+        fixed.type = 'parity';
+        fixed.value = 0;
+      } else if (desc.includes('odd')) {
+        fixed.type = 'parity';
+        fixed.value = 1;
+      }
+    }
+
+    // ── Split merged custom constraints that describe even/odd ──
+    if (fixed.type === 'custom') {
+      const desc = (fixed.description || '').toLowerCase();
+      const evenOddPattern = /even\s+(?:number\s+of\s+)?(\w)\S*\s+and\s+odd\s+(?:number\s+of\s+)?(\w)/i;
+      const match = desc.match(evenOddPattern);
+      if (match) {
+        newConstraints.push({
+          type: 'parity',
+          target: match[1],
+          value: 0,
+          description: `even number of ${match[1]}'s`,
+        });
+        newConstraints.push({
+          type: 'parity',
+          target: match[2],
+          value: 1,
+          description: `odd number of ${match[2]}'s`,
+        });
+        continue; // skip pushing the original merged constraint
+      }
+    }
+
+    newConstraints.push(fixed);
+  }
+
+  normalized.atomicConstraints = newConstraints;
+  return normalized;
+}
+
 function validateParseResult(data: unknown): { success: true; data: QuestionParseResult } | { success: false; error: string } {
   const validated = QuestionParseResultSchema.safeParse(data);
   if (!validated.success) {
@@ -131,10 +209,10 @@ function validateParseResult(data: unknown): { success: true; data: QuestionPars
       assumptions: (data as Record<string, unknown>).assumptions || [],
     };
     const retry = QuestionParseResultSchema.safeParse(patched);
-    if (retry.success) return { success: true, data: retry.data };
+    if (retry.success) return { success: true, data: normalizeConstraints(retry.data) };
     return { success: false, error: `Schema validation failed: ${validated.error.message}` };
   }
-  return { success: true, data: validated.data };
+  return { success: true, data: normalizeConstraints(validated.data) };
 }
 
 // ── Ambiguity Detection ────────────────────────────────────────

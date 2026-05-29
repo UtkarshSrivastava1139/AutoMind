@@ -57,6 +57,49 @@ EXTRACT these fields into a JSON object:
 10. "confidence": your confidence in the extraction (0.0 to 1.0)
 11. "notes": any additional notes
 
+─── CONSTRAINT TYPE MAPPING (CRITICAL — follow exactly) ───
+
+Use "parity" when the question says even/odd number of a symbol:
+  "even number of a's"  → { "type": "parity", "target": "a", "value": 0 }
+  "odd number of b's"   → { "type": "parity", "target": "b", "value": 1 }
+  "even number of 0's"  → { "type": "parity", "target": "0", "value": 0 }
+  "odd number of 1's"   → { "type": "parity", "target": "1", "value": 1 }
+  value 0 = even, value 1 = odd. NEVER use any other value for parity.
+
+Use "divisibility" for "divisible by N" or "multiple of N":
+  "divisible by 3"      → { "type": "divisibility", "target": "", "value": 3 }
+  "count of a divisible by 3" → { "type": "divisibility", "target": "a", "value": 3 }
+
+Use "starts_with" / "ends_with" / "contains" / "not_contains" for substring patterns:
+  "starts with ab"      → { "type": "starts_with", "target": "ab" }
+  "ends in 01"          → { "type": "ends_with", "target": "01" }
+  "contains the substring 110" → { "type": "contains", "target": "110" }
+  "does not contain 00" → { "type": "not_contains", "target": "00" }
+
+Use "count_exact", "count_min", "count_max" for exact count conditions:
+  "exactly 3 a's"       → { "type": "count_exact", "target": "a", "value": 3 }
+  "at least 2 b's"      → { "type": "count_min", "target": "b", "value": 2 }
+  "at most 5 zeros"     → { "type": "count_max", "target": "0", "value": 5 }
+
+Use "length_exact", "length_min", "length_max" for string length:
+  "length exactly 4"    → { "type": "length_exact", "value": 4 }
+  "length at least 2"   → { "type": "length_min", "value": 2 }
+
+Use "pattern" ONLY when a regex is explicitly provided in the question.
+Use "custom" ONLY as a last resort when no other type fits.
+
+─── TARGET FIELD RULES ───
+
+The "target" field MUST be the raw alphabet symbol(s), NEVER a word or phrase.
+  CORRECT: "target": "a"
+  WRONG:   "target": "a's"  or  "target": "letter a"  or  "target": "symbol a"
+If the constraint applies to overall string length or binary number value, set "target": "" or omit it.
+
+─── MULTIPLE CONSTRAINTS ───
+
+If the question has multiple conditions (e.g., "even a's AND odd b's"), extract each as a SEPARATE atomicConstraint. NEVER merge multiple conditions into a single constraint.
+  "even number of a's and odd number of b's" → TWO separate parity constraints, not one custom constraint.
+
 RULES:
 1. Output ONLY valid JSON matching the schema above. No text before or after.
 2. Be conservative — if a constraint is unclear, add an ambiguityFlag rather than guessing.
@@ -65,7 +108,7 @@ RULES:
 5. Clearly separate stated facts from your inferences (put inferences in "assumptions").
 6. For the alphabet, if not stated, infer from context and note it in assumptions.
 7. Generate diverse positive and negative examples. Include edge cases (empty string, single character, long strings).
-8. Make sure positive examples genuinely satisfy ALL constraints and negative examples violate at least one. 
+8. Make sure positive examples genuinely satisfy ALL constraints and negative examples violate at least one.
 CRITICAL: Double-check your examples manually before outputting! For counting constraints (e.g., "even number of a's"), count the exact occurrences in each example string. For "aba", there are 2 a's (even), so it MUST be a positive example, not a negative example. Do not hallucinate example classifications.`;
 
 // ── Ambiguity Detection ────────────────────────────────────────

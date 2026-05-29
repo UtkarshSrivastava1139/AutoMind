@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useQuestionStore } from '@web/store/useQuestionStore';
 import ReactMarkdown from 'react-markdown';
@@ -13,7 +13,7 @@ export function ExplanationPanel() {
 
   return (
     <div className="glass-card rounded-2xl border border-border shadow-md bg-bg-app overflow-hidden flex flex-col">
-      <div className="bg-bg-card/50 px-5 py-4 border-b border-border flex items-center justify-between gap-2">
+      <div className="bg-bg-card/50 px-5 py-4 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20">
             <Lightbulb size={16} />
