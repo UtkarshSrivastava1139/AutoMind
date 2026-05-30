@@ -221,34 +221,56 @@ body {
 
 /* =========================================
    Print / PDF Export Styles
+   Uses window.print() → Save as PDF
+   Produces a clean, readable A4 document
 ========================================= */
 @media print {
-  /* Hide UI elements not meant for the PDF */
+  /* ── Page setup ── */
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+
+  /* ── Global resets ── */
+  html {
+    color-scheme: light !important;
+  }
+
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ── Hide non-printable UI elements ── */
+  nav,
   .sidebar,
-  .btn,
-  .qs-status-footer,
-  .diagram-header button,
-  .extraction-actions {
+  .print\:hidden,
+  [data-html2canvas-ignore],
+  .animate-spin,
+  .animate-pulse,
+  button,
+  .pencil-loader-wrapper {
     display: none !important;
   }
 
-  /* Reset layout constraints for full page printing */
-  body, 
+  /* ── Layout resets ── */
   .dashboard-layout,
   .dashboard-main,
-  .dashboard-content,
-  .question-solver-page {
+  .dashboard-content {
+    display: block !important;
     height: auto !important;
     min-height: auto !important;
     overflow: visible !important;
-    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
     background: white !important;
-    color: black !important;
   }
 
-  /* Convert grid to block so columns stack nicely */
+  /* ── Results grid → single column ── */
   .qs-results-grid {
     display: block !important;
   }
@@ -258,54 +280,147 @@ body {
     width: 100% !important;
     max-height: none !important;
     overflow: visible !important;
-    margin-bottom: 2rem;
+    position: static !important;
+    margin-bottom: 16pt;
   }
 
-  /* Strip glass-card styling for clean print */
+  /* ── Glass cards → clean bordered panels ── */
   .glass-card {
-    background: none !important;
+    background: white !important;
     backdrop-filter: none !important;
-    border: 1px solid #ccc !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
     box-shadow: none !important;
     break-inside: avoid;
-    margin-bottom: 1.5rem;
-    color: black !important;
+    margin-bottom: 12pt;
+    page-break-inside: avoid;
   }
 
-  /* Text color resets for readability on white paper */
+  /* ── Text color resets for paper ── */
   * {
-    color: black !important;
+    color: #1a1a1a !important;
     text-shadow: none !important;
   }
 
-  .field-label,
-  .qs-page-subtitle,
-  .panel-title {
-    color: #333 !important;
+  /* Slightly muted text where needed */
+  .text-text-muted,
+  .text-text-secondary {
+    color: #6b7280 !important;
   }
 
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    color: #111827 !important;
+  }
+
+  /* ── Status badges ── */
   .task-type-badge,
   .automaton-type-badge,
   .constraint-type {
-    border: 1px solid #555 !important;
-    background: #f0f0f0 !important;
+    border: 1px solid #9ca3af !important;
+    background: #f3f4f6 !important;
+    color: #374151 !important;
   }
 
-  /* Ensure SVG fits the page width */
+  /* ── SVG Diagram ── */
   .automaton-svg {
     width: 100% !important;
     height: auto !important;
+    max-height: 350pt !important;
   }
 
-  /* Force page breaks where appropriate */
+  .automaton-svg circle {
+    fill: white !important;
+    stroke: #374151 !important;
+  }
+
+  .automaton-svg text {
+    fill: #1a1a1a !important;
+  }
+
+  .automaton-svg line,
+  .automaton-svg path {
+    stroke: #6b7280 !important;
+  }
+
+  .automaton-svg polygon {
+    fill: #6b7280 !important;
+  }
+
+  /* Accept state circles keep distinction */
+  .automaton-svg circle[fill*="indigo"],
+  .automaton-svg circle[fill*="99, 102, 241"] {
+    fill: #eef2ff !important;
+    stroke: #4f46e5 !important;
+  }
+
+  /* ── Transition table ── */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th {
+    background: #f9fafb !important;
+    border: 1px solid #d1d5db !important;
+    padding: 6pt 10pt !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+  }
+
+  td {
+    border: 1px solid #e5e7eb !important;
+    padding: 5pt 10pt !important;
+    color: #1a1a1a !important;
+  }
+
+  tr:nth-child(even) td {
+    background: #f9fafb !important;
+  }
+
+  /* ── Backgrounds that should be light ── */
+  [class*="bg-bg-card"],
+  [class*="bg-bg-app"],
+  [class*="bg-primary/"],
+  [class*="bg-secondary/"],
+  [class*="bg-success/"],
+  [class*="bg-warning/"],
+  [class*="bg-error/"] {
+    background: #f9fafb !important;
+  }
+
+  /* ── Page breaks ── */
   .explanation-panel {
-    break-before: always;
+    break-before: auto;
+    page-break-before: auto;
   }
-}
 
-/* Specific styles just for the html2pdf export element */
-.pdf-export-mode {
-  padding: 2rem !important;
-  background-color: var(--color-bg-app) !important;
-  /* You can force light mode for PDF if you want by overriding CSS vars here */
+  /* Prevent orphan sections */
+  .glass-card,
+  .qs-left-column > div,
+  .qs-right-column > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ── Sticky elements — un-stick ── */
+  .lg\:sticky {
+    position: static !important;
+  }
+
+  /* ── Footer ── */
+  .qs-status-footer {
+    border: 1px solid #d1d5db !important;
+    background: #f9fafb !important;
+  }
+
+  /* ── Scrollable areas → show all ── */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-auto,
+  .custom-scrollbar {
+    overflow: visible !important;
+    max-height: none !important;
+  }
 }

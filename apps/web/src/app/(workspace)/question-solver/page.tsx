@@ -8,129 +8,63 @@ import { TransitionTableView } from '@web/components/question-solver/TransitionT
 import { TestCasePanel } from '@web/components/question-solver/TestCasePanel';
 import { ExplanationPanel } from '@web/components/question-solver/ExplanationPanel';
 import { PencilLoader } from '@web/components/ui/PencilLoader';
-import { AlertTriangle, CheckCircle2, PenLine, Cpu } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { AlertTriangle, CheckCircle2, PenLine, Cpu, Brain, Scan, Cog, ShieldCheck, Printer } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 
-const PROGRESS_MESSAGES = [
-  "Extracting entities...",
-  "Synthesizing logic...",
-  "Building automaton...",
-  "Running verification..."
+const PARSE_STEPS = [
+  { icon: Scan, label: "Reading your question…", sub: "Classifying problem type" },
+  { icon: Brain, label: "Extracting constraints…", sub: "Identifying alphabet, language rules" },
+  { icon: ShieldCheck, label: "Checking for ambiguity…", sub: "Validating extracted parameters" },
+];
+
+const SOLVE_MESSAGES = [
+  "Constructing automaton…",
+  "Building state machine…",
+  "Minimizing states…",
+  "Running verification…"
 ];
 
 export default function QuestionSolverPage() {
   const { status, error, solveResult } = useQuestionStore();
   const [isExporting, setIsExporting] = useState(false);
-  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const [parseStepIdx, setParseStepIdx] = useState(0);
+  const [solveMsgIdx, setSolveMsgIdx] = useState(0);
 
+  // Parsing step animation
+  useEffect(() => {
+    if (status === 'parsing') {
+      setParseStepIdx(0);
+      const interval = setInterval(() => {
+        setParseStepIdx((prev) => (prev < PARSE_STEPS.length - 1 ? prev + 1 : prev));
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [status]);
+
+  // Solving message animation
   useEffect(() => {
     if (status === 'solving') {
-      setLoadingMsgIdx(0);
+      setSolveMsgIdx(0);
       const interval = setInterval(() => {
-        setLoadingMsgIdx((prev) => (prev < PROGRESS_MESSAGES.length - 1 ? prev + 1 : prev));
+        setSolveMsgIdx((prev) => (prev < SOLVE_MESSAGES.length - 1 ? prev + 1 : prev));
       }, 1500);
       return () => clearInterval(interval);
     }
   }, [status]);
 
-  const handleDownloadPDF = async () => {
+  const handlePrint = useCallback(() => {
     setIsExporting(true);
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = document.getElementById('pdf-export-wrapper');
-      
-      if (!element) throw new Error("Export content not found");
-
-      // Create a clean clone for PDF export (avoid React Flow and other interactive elements)
-      const clone = element.cloneNode(true) as HTMLElement;
-      
-      // Remove any interactive elements that don't render well in PDF
-      clone.querySelectorAll('[data-html2canvas-ignore]').forEach(el => el.remove());
-      clone.querySelectorAll('.svg-pan-zoom').forEach(el => el.remove());
-
-      // Force background colors explicitly on the clone to ensure dark mode rendering
-      clone.style.backgroundColor = '#0f172a';
-      clone.style.color = '#e2e8f0';
-      clone.style.padding = '16px';
-      
-      // Make grid single-column in the PDF so the diagram and table expand to full page width
-      const grid = clone.querySelector('.qs-results-grid') as HTMLElement;
-      if (grid) {
-        grid.style.display = 'flex';
-        grid.style.flexDirection = 'column';
-        grid.style.gap = '24px';
-      }
-      
-      const leftCol = clone.querySelector('.qs-left-column') as HTMLElement;
-      if (leftCol) leftCol.style.width = '100%';
-      
-      const rightCol = clone.querySelector('.qs-right-column') as HTMLElement;
-      if (rightCol) rightCol.style.width = '100%';
-
-      const opt = {
-        margin: 10,
-        filename: `automata-solution-${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          backgroundColor: '#0f172a', // Use dark background for PDF to match app theme
-          logging: false,
-          allowTaint: true
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-        pagebreak: { mode: ['css', 'legacy'] }
-      };
-
-      await html2pdf().set(opt).from(clone).save();
-      
-      // Show success message
-      const successMsg = document.createElement('div');
-      successMsg.textContent = 'PDF downloaded successfully!';
-      successMsg.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: var(--color-success);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 6px;
-        z-index: 1000;
-        font-size: 0.9rem;
-      `;
-      document.body.appendChild(successMsg);
-      setTimeout(() => successMsg.remove(), 3000);
-    } catch (err) {
-      console.error("PDF generation failed:", err);
-      
-      // Show error message
-      const errorMsg = document.createElement('div');
-      errorMsg.textContent = 'PDF generation failed. Try using print instead.';
-      errorMsg.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: var(--color-error);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 6px;
-        z-index: 1000;
-        font-size: 0.9rem;
-      `;
-      document.body.appendChild(errorMsg);
-      setTimeout(() => errorMsg.remove(), 3000);
-      
-      // Fallback to native print
-      setTimeout(() => window.print(), 500);
-    } finally {
+    // Small delay to let state update render, then print
+    setTimeout(() => {
+      window.print();
       setIsExporting(false);
-    }
-  };
+    }, 100);
+  }, []);
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 pb-20">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold font-display text-text-primary">Question Solver</h1>
           <p className="text-sm text-text-muted mt-1">
@@ -138,31 +72,28 @@ export default function QuestionSolverPage() {
           </p>
         </div>
         
-        {status === 'solved' || status === 'explaining' ? (
+        {(status === 'solved' || status === 'explaining') && (
           <button 
             className="px-4 py-2 bg-bg-card hover:bg-primary/10 text-primary border border-primary/20 rounded-xl transition-all shadow-sm font-semibold text-sm flex items-center gap-2 h-fit"
-            onClick={handleDownloadPDF}
+            onClick={handlePrint}
             disabled={isExporting}
-            data-html2canvas-ignore
           >
             {isExporting ? <span className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin"/> : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
+              <Printer size={16} />
             )}
-            {isExporting ? 'Generating PDF...' : 'Download PDF'}
+            {isExporting ? 'Preparing…' : 'Print / Save PDF'}
           </button>
-        ) : null}
+        )}
       </div>
 
       {/* Input */}
-      <QuestionInput />
+      <div className="print:hidden">
+        <QuestionInput />
+      </div>
 
       {/* Error */}
       {error && status === 'error' && (
-        <div className="flex items-center gap-3 p-4 bg-error/10 border border-error/20 text-error rounded-xl shadow-lg" data-html2canvas-ignore>
+        <div className="flex items-center gap-3 p-4 bg-error/10 border border-error/20 text-error rounded-xl shadow-lg print:hidden">
           <AlertTriangle size={20} className="shrink-0" />
           <span>{error}</span>
         </div>
@@ -209,12 +140,72 @@ export default function QuestionSolverPage() {
         </div>
       )}
 
+      {/* ── Parsing Loader ── */}
+      {status === 'parsing' && (
+        <div className="mt-4 glass-card rounded-2xl border border-border/50 p-8 md:p-12 flex flex-col items-center justify-center text-center min-h-[320px] relative overflow-hidden">
+          {/* Animated background pulse */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 animate-pulse" />
+          
+          {/* Brain icon with glow */}
+          <div className="relative mb-8">
+            <div className="absolute inset-0 w-20 h-20 rounded-full bg-primary/20 blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <Brain size={36} className="text-primary animate-pulse" />
+            </div>
+          </div>
+
+          {/* Step indicators */}
+          <div className="flex flex-col gap-4 w-full max-w-sm">
+            {PARSE_STEPS.map((step, i) => {
+              const Icon = step.icon;
+              const isActive = i === parseStepIdx;
+              const isDone = i < parseStepIdx;
+
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500 ${
+                    isActive
+                      ? 'bg-primary/10 border border-primary/30 shadow-lg shadow-primary/10'
+                      : isDone
+                      ? 'bg-success/5 border border-success/20 opacity-70'
+                      : 'bg-bg-card/30 border border-border/30 opacity-40'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                    isActive ? 'bg-primary/20 text-primary' : isDone ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'
+                  }`}>
+                    {isDone ? <CheckCircle2 size={16} /> : isActive ? <Icon size={16} className="animate-pulse" /> : <Icon size={16} />}
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isActive ? 'text-primary' : isDone ? 'text-success' : 'text-text-muted'}`}>
+                      {step.label}
+                    </p>
+                    <p className="text-xs text-text-muted truncate">{step.sub}</p>
+                  </div>
+                  {isActive && (
+                    <span className="ml-auto w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Print Header (only visible in print) ── */}
+      <div className="hidden print:block mb-4">
+        <h1 className="text-2xl font-bold text-black">AutoMind — Question Solver</h1>
+        <p className="text-sm text-gray-600 mt-1">Generated solution • {new Date().toLocaleDateString()}</p>
+        <hr className="mt-3 border-gray-300" />
+      </div>
+
       {/* Results Area */}
       <div id="pdf-export-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
         {(status === 'parsed' || status === 'clarification' || status === 'solving' || status === 'solved' || status === 'explaining') && (
-        <div className="qs-results-grid grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 items-start w-full">
+        <div className="qs-results-grid grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 items-start w-full print:block">
           {/* Left Column: Extraction + Test Cases */}
-          <div className="qs-left-column flex flex-col gap-6 w-full">
+          <div className="qs-left-column flex flex-col gap-6 w-full print:mb-6">
             <ExtractionPreview />
             <TestCasePanel />
           </div>
@@ -222,15 +213,15 @@ export default function QuestionSolverPage() {
           {/* Right Column: Diagram + Table */}
           <div className="qs-right-column flex flex-col gap-6 w-full min-w-0">
             {status === 'solving' ? (
-              <div className="min-h-[400px] glass-card flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-border bg-bg-app shadow-2xl relative overflow-hidden">
+              <div className="min-h-[400px] glass-card flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-border bg-bg-app shadow-2xl relative overflow-hidden print:hidden">
                 <PencilLoader />
                 <p className="mt-6 text-primary font-semibold tracking-wide animate-pulse">
-                  {PROGRESS_MESSAGES[loadingMsgIdx]}
+                  {SOLVE_MESSAGES[solveMsgIdx]}
                 </p>
               </div>
             ) : (
               <>
-                <div className="w-full glass-card rounded-2xl border border-border bg-bg-app overflow-hidden shadow-2xl flex flex-col items-center relative lg:sticky lg:top-20 lg:z-10">
+                <div className="w-full glass-card rounded-2xl border border-border bg-bg-app overflow-hidden shadow-2xl flex flex-col items-center relative lg:sticky lg:top-20 lg:z-10 print:shadow-none print:border-gray-300 print:sticky-none print:static">
                   <SolutionDiagram />
                 </div>
                 <TransitionTableView />
@@ -244,16 +235,16 @@ export default function QuestionSolverPage() {
 
       {/* Verification Status Footer */}
       {solveResult && status === 'solved' && (
-        <div className="glass-card mt-8 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5" data-html2canvas-ignore>
+        <div className="glass-card mt-8 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 print:bg-gray-50 print:border-gray-300">
           <div className="flex items-center gap-4">
-            <span className={`px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide shadow-sm flex items-center gap-2 ${solveResult.status === 'verified' ? 'bg-success/20 text-success border border-success/30' : 'bg-warning/20 text-warning border border-warning/30'}`}>
+            <span className={`px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide shadow-sm flex items-center gap-2 ${solveResult.status === 'verified' ? 'bg-success/20 text-success border border-success/30 print:bg-green-100 print:text-green-800 print:border-green-300' : 'bg-warning/20 text-warning border border-warning/30 print:bg-yellow-100 print:text-yellow-800 print:border-yellow-300'}`}>
               {solveResult.status === 'verified' ? (
                 <><CheckCircle2 size={16} /> Engine Verified</>
               ) : (
                 <><AlertTriangle size={16} /> Partially Verified</>
               )}
             </span>
-            <span className="text-sm font-medium text-text-muted bg-bg-app px-3 py-1 rounded-lg border border-border shadow-inner">
+            <span className="text-sm font-medium text-text-muted bg-bg-app px-3 py-1 rounded-lg border border-border shadow-inner print:bg-white print:shadow-none">
               {solveResult.candidatesEvaluated} candidate(s) evaluated
             </span>
           </div>
@@ -265,5 +256,3 @@ export default function QuestionSolverPage() {
     </div>
   );
 }
-
-

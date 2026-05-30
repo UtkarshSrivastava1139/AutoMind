@@ -12,9 +12,25 @@ function normalizeText(text: string): string {
 /**
  * Perform a cache lookup for common TAFL problems.
  * If found, remaps the canonical automaton to the requested alphabet.
+ * 
+ * IMPORTANT: Only matches simple, single-constraint queries.
+ * Compound queries (e.g. "even a's AND odd b's") must NOT hit the cache,
+ * because the cached DFA only satisfies one constraint.
  */
 export function lookupCanonicalCache(query: string, alphabet: string[]): Automaton | null {
   const normQuery = normalizeText(query);
+
+  // ── Guard: reject compound constraint queries ──
+  // If the query contains multiple constraint indicators joined by "and",
+  // it's a compound question and the cache (which stores single-constraint
+  // DFAs) must NOT be used.
+  const constraintKeywords = ['even', 'odd', 'divisible', 'starts with', 'ends with', 'contains', 'at least', 'at most', 'exactly'];
+  const matchedKeywords = constraintKeywords.filter(kw => normQuery.includes(kw));
+  if (matchedKeywords.length > 1) {
+    // Multiple distinct constraint keywords → compound question → skip cache
+    return null;
+  }
+
   const cache: any[] = canonicalCache;
 
   for (const entry of cache) {
