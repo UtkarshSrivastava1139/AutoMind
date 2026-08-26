@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OpenRouterClient, SYSTEM_PROMPT } from '@automind/prompts';
+import { getAIClient, SYSTEM_PROMPT } from '@automind/prompts';
+
 // Lightweight server-side markdown -> HTML converter (avoid client-only libs)
 function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = new OpenRouterClient();
+    const client = getAIClient();
     
     // Prepare messages with system prompt & sliding window (keep last 10 messages)
     const recentMessages = messages.slice(-10);
@@ -73,7 +74,6 @@ export async function POST(request: NextRequest) {
       })),
     ];
 
-    // Use OpenRouterClient which handles retry and fallback automatically
     const result = await client.chat(chatMessages, {
       temperature: 0.7,
       maxTokens: 1000,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { OpenRouterClient, AI_LAYOUT_PROMPT } from '@automind/prompts';
+import { getAIClient, AI_LAYOUT_PROMPT, parseAIJSON } from '@automind/prompts';
 import { AILayoutResponseSchema, AutomatonSchema } from '@automind/schemas';
 
 const LayoutRequestSchema = z.object({
@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { automaton } = validated.data;
-    const client = new OpenRouterClient();
+    const client = getAIClient();
     
-    // We use a faster model for UI responsiveness
+    // We use a fast model for UI responsiveness
     const messages = [
       { role: 'system' as const, content: AI_LAYOUT_PROMPT.replace('{{automatonJson}}', JSON.stringify(automaton, null, 2)) }
     ];
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     const result = await client.chat(messages, { 
       jsonMode: true, 
       temperature: 0.1,
-      // Gemini 1.5 Flash or Pro via OpenRouter is usually fast enough for this
     });
 
     if (!result.success) {
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const parsed = OpenRouterClient.parseJSON<unknown>(result.content);
+    const parsed = parseAIJSON<unknown>(result.content);
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'parse_error', message: 'Failed to parse AI layout response' },

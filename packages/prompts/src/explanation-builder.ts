@@ -5,12 +5,12 @@
  * using LLM. Only called on verified results.
  */
 
-import type { OpenRouterClient } from './openrouter-client';
+import type { AIClient } from './ai-client';
 import type { Automaton, QuestionParseResult } from '@automind/schemas';
 import { EXPLANATION_GENERATOR_PROMPT } from './question-prompts';
 
 export async function generateExplanation(
-  client: OpenRouterClient,
+  client: AIClient,
   questionText: string,
   parseResult: QuestionParseResult,
   automaton: Automaton,

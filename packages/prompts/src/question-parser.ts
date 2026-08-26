@@ -1,11 +1,12 @@
 /**
  * Question Parser — AI extraction pipeline
  *
- * Uses OpenRouter LLM calls to classify questions, extract constraints,
+ * Uses LLM calls (Gemini or OpenRouter) to classify questions, extract constraints,
  * and detect ambiguities. All outputs are Zod-validated.
  */
 
-import { OpenRouterClient } from './openrouter-client';
+import type { AIClient } from './ai-client';
+import { parseAIJSON } from './ai-client';
 import type { TaskClassification, QuestionParseResult, AmbiguityFlag } from '@automind/schemas';
 import { TaskClassificationSchema, QuestionParseResultSchema, AmbiguityFlagSchema } from '@automind/schemas';
 import { z } from 'zod';
@@ -18,7 +19,7 @@ import {
 // ── Task Classification ────────────────────────────────────────
 
 export async function classifyQuestion(
-  client: OpenRouterClient,
+  client: AIClient,
   questionText: string
 ): Promise<{ success: true; data: TaskClassification } | { success: false; error: string }> {
   const messages = [
@@ -32,7 +33,7 @@ export async function classifyQuestion(
     return { success: false, error: `Classification failed: ${result.error}` };
   }
 
-  const parsed = OpenRouterClient.parseJSON<unknown>(result.content);
+  const parsed = parseAIJSON<unknown>(result.content);
   const sanitizeData = (data: any) => {
     if (data && typeof data.taskType === 'string') {
       data.taskType = data.taskType.replace(/^:/, '').trim();
@@ -57,7 +58,7 @@ export async function classifyQuestion(
     if (!retry.success) {
       return { success: false, error: `Retry failed: ${retry.error}` };
     }
-    const retryParsed = OpenRouterClient.parseJSON<unknown>(retry.content);
+    const retryParsed = parseAIJSON<unknown>(retry.content);
     if (!retryParsed.success) {
       return { success: false, error: `JSON parse failed after retry: ${retryParsed.error}` };
     }
@@ -79,7 +80,7 @@ export async function classifyQuestion(
 // ── Constraint Extraction ──────────────────────────────────────
 
 export async function extractConstraints(
-  client: OpenRouterClient,
+  client: AIClient,
   questionText: string,
   taskType: string
 ): Promise<{ success: true; data: QuestionParseResult } | { success: false; error: string }> {
@@ -98,7 +99,7 @@ export async function extractConstraints(
     return { success: false, error: `Extraction failed: ${result.error}` };
   }
 
-  const parsed = OpenRouterClient.parseJSON<unknown>(result.content);
+  const parsed = parseAIJSON<unknown>(result.content);
   if (!parsed.success) {
     // Retry
     const retryMessages = [
@@ -110,7 +111,7 @@ export async function extractConstraints(
     if (!retry.success) {
       return { success: false, error: `Retry failed: ${retry.error}` };
     }
-    const retryParsed = OpenRouterClient.parseJSON<unknown>(retry.content);
+    const retryParsed = parseAIJSON<unknown>(retry.content);
     if (!retryParsed.success) {
       return { success: false, error: `JSON parse failed after retry: ${retryParsed.error}` };
     }
@@ -228,7 +229,7 @@ const AmbiguityResponseSchema = z.object({
 });
 
 export async function detectAmbiguities(
-  client: OpenRouterClient,
+  client: AIClient,
   parseResult: QuestionParseResult
 ): Promise<{ ambiguities: AmbiguityFlag[]; overallAssessment: string }> {
   const prompt = AMBIGUITY_DETECTOR_PROMPT
@@ -247,7 +248,7 @@ export async function detectAmbiguities(
     return { ambiguities: [], overallAssessment: 'clear' };
   }
 
-  const parsed = OpenRouterClient.parseJSON<unknown>(result.content);
+  const parsed = parseAIJSON<unknown>(result.content);
   if (!parsed.success) {
     console.warn('[AmbiguityDetector] JSON parse failed:', parsed.error);
     return { ambiguities: [], overallAssessment: 'clear' };

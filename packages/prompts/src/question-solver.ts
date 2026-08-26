@@ -8,7 +8,8 @@
  * Supports: build_dfa, regex_to_nfa (MVP scope)
  */
 
-import { OpenRouterClient } from './openrouter-client';
+import type { AIClient } from './ai-client';
+import { parseAIJSON } from './ai-client';
 import type {
   QuestionParseResult,
   QuestionSolveResult,
@@ -73,7 +74,7 @@ export interface SolveStageError {
  * Returns structured parse result or asks for clarification.
  */
 export async function parseQuestion(
-  client: OpenRouterClient,
+  client: AIClient,
   questionText: string
 ): Promise<ParseStageResult | ParseStageError> {
   // Step 1: Classify
@@ -137,7 +138,7 @@ export async function parseQuestion(
  * The generation strategy depends on the task type.
  */
 export async function solveQuestion(
-  client: OpenRouterClient,
+  client: AIClient,
   questionText: string,
   parseResult: QuestionParseResult
 ): Promise<SolveStageResult | SolveStageError> {
@@ -158,7 +159,7 @@ export async function solveQuestion(
 // ── build_dfa strategy ─────────────────────────────────────────
 
 async function solveBuildDFA(
-  client: OpenRouterClient,
+  client: AIClient,
   questionText: string,
   parseResult: QuestionParseResult
 ): Promise<SolveStageResult | SolveStageError> {
@@ -330,7 +331,7 @@ async function solveBuildDFA(
 }
 
 async function requestDFACandidate(
-  client: OpenRouterClient,
+  client: AIClient,
   parseResult: QuestionParseResult,
   counterexamples?: string[]
 ): Promise<{ success: true; automaton: Automaton } | { success: false; error: string }> {
@@ -355,7 +356,7 @@ async function requestDFACandidate(
     return { success: false, error: `DFA generation failed: ${result.error}` };
   }
 
-  const parsed = OpenRouterClient.parseJSON<Record<string, unknown>>(result.content);
+  const parsed = parseAIJSON<Record<string, unknown>>(result.content);
   if (!parsed.success) {
     return { success: false, error: `DFA JSON parse failed: ${parsed.error}` };
   }

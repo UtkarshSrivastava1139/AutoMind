@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { OpenRouterClient, solveQuestion } from '@automind/prompts';
+import { getAIClient, solveQuestion } from '@automind/prompts';
 import { QuestionParseResultSchema } from '@automind/schemas';
 
 const SolveRequestSchema = z.object({
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const { questionText, parseResult } = validated.data;
 
-    const client = new OpenRouterClient();
+    const client = getAIClient();
     const result = await solveQuestion(client, questionText, parseResult as any);
 
     if (!result.success) {

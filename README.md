@@ -88,9 +88,14 @@ Make sure you have [Node.js](https://nodejs.org/) (v18+) and `npm` or `pnpm` ins
    ```
 
 3. **Set up environment variables:**
-   Create a `.env.local` file in the root directory and configure your AI provider:
+   Create a `.env.local` file in the root directory and configure your AI provider (Google Gemini or OpenRouter):
    ```env
-   OPENAI_API_KEY=your_api_key_here
+   # Google Gemini API (Recommended: fast, high token limits, native JSON mode)
+   GEMINI_API_KEY=your_gemini_api_key_here
+   GEMINI_MODEL=gemini-2.0-flash
+
+   # Or OpenRouter
+   # OPENROUTER_API_KEY=your_openrouter_key_here
    ```
 
 4. **Start the development server:**

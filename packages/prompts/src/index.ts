@@ -84,10 +84,16 @@ Current Streak: {{streak}}
 Suggest what the student should study next and why, considering their weakest areas and learning progression.
 `;
 
-// ── OpenRouter Client ──────────────────────────────────────────
+// ── AI Clients (Google Gemini, OpenRouter & Unified Interface) ─
+
+export { GeminiClient } from './gemini-client';
+export type { GeminiConfig } from './gemini-client';
 
 export { OpenRouterClient } from './openrouter-client';
-export type { OpenRouterConfig, ChatMessage, ChatOptions, ChatResult, ChatResponseMeta } from './openrouter-client';
+export type { OpenRouterConfig } from './openrouter-client';
+
+export { getAIClient, createAIClient, FallbackAIClient, parseAIJSON } from './ai-client';
+export type { AIClient, ChatMessage, ChatOptions, ChatResult, ChatResponseMeta, ClientFactoryOptions } from './ai-client';
 
 // ── Question Solver Prompts ────────────────────────────────────
 

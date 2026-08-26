@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { OpenRouterClient, generateExplanation } from '@automind/prompts';
+import { getAIClient, generateExplanation } from '@automind/prompts';
 import { AutomatonSchema, QuestionParseResultSchema } from '@automind/schemas';
 
 const ExplainRequestSchema = z.object({
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const { questionText, parseResult, automaton } = validated.data;
 
-    const client = new OpenRouterClient();
+    const client = getAIClient();
     const result = await generateExplanation(client, questionText, parseResult as any, automaton as any);
 
     if (!result.success) {

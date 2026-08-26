@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { OpenRouterClient, parseQuestion } from '@automind/prompts';
+import { getAIClient, parseQuestion } from '@automind/prompts';
 
 const ParseRequestSchema = z.object({
   questionText: z.string().min(5).max(2000),
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     const { questionText } = validated.data;
 
-    const client = new OpenRouterClient();
+    const client = getAIClient();
     const result = await parseQuestion(client, questionText);
 
     if (!result.success) {

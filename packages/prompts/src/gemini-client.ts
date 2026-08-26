@@ -1,53 +1,49 @@
 /**
- * OpenRouter API Client for AutoMind
+ * Google Gemini API Client for AutoMind
  *
- * Handles LLM calls via OpenRouter with model fallback, timeout, retry,
- * and structured JSON output support.
+ * Handles LLM calls via Google Generative Language API (Gemini) with support
+ * for structured JSON outputs, system instructions, retry with exponential backoff,
+ * timeout handling, and latency tracking.
  */
 
 import type { ChatMessage, ChatOptions, ChatResult, ChatResponseMeta, AIClient } from './ai-client';
 
 // ── Types ──────────────────────────────────────────────────────
 
-export interface OpenRouterConfig {
+export interface GeminiConfig {
   apiKey: string;
   baseUrl: string;
-  primaryModel: string;
-  fallbackModels: string[];
+  model: string;
   timeoutMs: number;
   maxRetries: number;
   retryDelayMs: number;
 }
 
-export type { ChatMessage, ChatOptions, ChatResult, ChatResponseMeta, AIClient };
-
 // ── Default config from environment ────────────────────────────
 
-function getDefaultConfig(): OpenRouterConfig {
-  const apiKey = typeof process !== 'undefined' ? process.env.OPENROUTER_API_KEY || '' : '';
-  const baseUrl = typeof process !== 'undefined'
-    ? process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'
-    : 'https://openrouter.ai/api/v1';
-  const primaryModel = typeof process !== 'undefined'
-    ? process.env.OPENROUTER_PRIMARY_MODEL || 'inclusionai/ring-2.6-1t:free'
-    : 'inclusionai/ring-2.6-1t:free';
-  const fallbackModelsRaw = typeof process !== 'undefined'
-    ? process.env.OPENROUTER_FALLBACK_MODELS || ''
-    : '';
-  const fallbackModels = fallbackModelsRaw
-    ? fallbackModelsRaw.split(',').map((m) => m.trim()).filter(Boolean)
-    : [
-        'nvidia/nemotron-3-super-120b-a12b:free',
-        'openrouter/owl-alpha',
-        'google/gemma-4-31b-it:free',
-      ];
+function getDefaultGeminiConfig(): GeminiConfig {
+  const apiKey =
+    (typeof process !== 'undefined'
+      ? process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_AI_API_KEY ||
+        process.env.GOOGLE_API_KEY
+      : '') || '';
+
+  const baseUrl =
+    (typeof process !== 'undefined'
+      ? process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta'
+      : '') || 'https://generativelanguage.googleapis.com/v1beta';
+
+  const model =
+    (typeof process !== 'undefined'
+      ? process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+      : '') || 'gemini-2.0-flash';
 
   return {
     apiKey,
     baseUrl,
-    primaryModel,
-    fallbackModels,
-    timeoutMs: parseInt(process?.env?.OPENROUTER_TIMEOUT_MS || '30000', 10),
+    model,
+    timeoutMs: parseInt(process?.env?.GEMINI_TIMEOUT_MS || '30000', 10),
     maxRetries: 2,
     retryDelayMs: 1000,
   };
@@ -55,17 +51,16 @@ function getDefaultConfig(): OpenRouterConfig {
 
 // ── Client ─────────────────────────────────────────────────────
 
-export class OpenRouterClient implements AIClient {
-  private config: OpenRouterConfig;
+export class GeminiClient implements AIClient {
+  private config: GeminiConfig;
 
-  constructor(config?: Partial<OpenRouterConfig>) {
-    const defaults = getDefaultConfig();
+  constructor(config?: Partial<GeminiConfig>) {
+    const defaults = getDefaultGeminiConfig();
     this.config = { ...defaults, ...config };
   }
 
   /**
-   * Send a chat completion request to OpenRouter.
-   * Handles timeout, retry, and model fallback automatically.
+   * Send a chat/generation request to Google Gemini API.
    */
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<ChatResult> {
     const startTime = Date.now();
@@ -73,30 +68,45 @@ export class OpenRouterClient implements AIClient {
     if (!this.config.apiKey || this.config.apiKey.trim() === '') {
       return {
         success: false,
-        error: 'Missing OpenRouter API Key. Please configure the OPENROUTER_API_KEY environment variable.',
+        error:
+          'Missing Google Gemini API Key. Please configure the GEMINI_API_KEY or GOOGLE_AI_API_KEY environment variable.',
         meta: { latencyMs: Date.now() - startTime },
       };
     }
 
+    // Separate system messages from user/assistant messages
+    const systemMessages = messages.filter((m) => m.role === 'system');
+    const conversationMessages = messages.filter((m) => m.role !== 'system');
+
+    // Build Gemini contents array
+    const contents = conversationMessages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    // If no conversation messages, use a dummy user prompt
+    if (contents.length === 0 && systemMessages.length > 0) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: 'Please proceed based on your system instructions.' }],
+      });
+    }
+
+    // Prepare request body
     const body: Record<string, unknown> = {
-      model: this.config.primaryModel,
-      messages,
-      temperature: options.temperature ?? 0.2,
+      contents,
+      generationConfig: {
+        temperature: options.temperature ?? 0.2,
+        ...(options.maxTokens ? { maxOutputTokens: options.maxTokens } : {}),
+        ...(options.jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
     };
 
-    // Add fallback models if available (OpenRouter limit: max 3 models in the array)
-    const uniqueFallbacks = this.config.fallbackModels.filter((m) => m !== this.config.primaryModel);
-    if (this.config.fallbackModels.length > 0) {
-      body.models = [this.config.primaryModel, ...uniqueFallbacks].slice(0, 3);
-    }
-
-    // Request structured JSON output when possible
-    if (options.jsonMode) {
-      body.response_format = { type: 'json_object' };
-    }
-
-    if (options.maxTokens) {
-      body.max_tokens = options.maxTokens;
+    // System instruction (supported in Gemini 1.5/2.0 API)
+    if (systemMessages.length > 0) {
+      body.systemInstruction = {
+        parts: [{ text: systemMessages.map((m) => m.content).join('\n\n') }],
+      };
     }
 
     let lastError = '';
@@ -106,13 +116,12 @@ export class OpenRouterClient implements AIClient {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
 
-        const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+        const url = `${this.config.baseUrl}/models/${encodeURIComponent(this.config.model)}:generateContent?key=${encodeURIComponent(this.config.apiKey)}`;
+
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.config.apiKey}`,
-            'HTTP-Referer': 'https://automind.dev',
-            'X-Title': 'AutoMind Question Solver',
           },
           body: JSON.stringify(body),
           signal: controller.signal,
@@ -122,9 +131,9 @@ export class OpenRouterClient implements AIClient {
 
         if (!response.ok) {
           const errorBody = await response.text().catch(() => '');
-          lastError = `HTTP ${response.status}: ${errorBody.slice(0, 200)}`;
+          lastError = `HTTP ${response.status}: ${errorBody.slice(0, 300)}`;
 
-          // Rate limited — wait and retry
+          // Rate limit — backoff and retry
           if (response.status === 429) {
             const retryAfter = parseInt(response.headers.get('retry-after') || '5', 10);
             await this.delay(retryAfter * 1000);
@@ -137,39 +146,40 @@ export class OpenRouterClient implements AIClient {
             continue;
           }
 
-          // Client errors — don't retry
+          // Client errors (400, 401, 403, 404) — do not retry
           return {
             success: false,
             error: lastError,
-            meta: { latencyMs: Date.now() - startTime },
+            meta: { latencyMs: Date.now() - startTime, model: this.config.model },
           };
         }
 
         const data = await response.json();
         const latencyMs = Date.now() - startTime;
 
-        const choice = data.choices?.[0];
-        if (!choice?.message?.content) {
-          lastError = 'Empty response from model';
+        const candidate = data.candidates?.[0];
+        const contentPart = candidate?.content?.parts?.[0]?.text;
+
+        if (!contentPart) {
+          const finishReason = candidate?.finishReason || 'Unknown';
+          lastError = `Empty response from Gemini model (Finish reason: ${finishReason})`;
           continue;
         }
 
         const meta: ChatResponseMeta = {
-          model: data.model || this.config.primaryModel,
+          model: this.config.model,
           latencyMs,
-          inputTokens: data.usage?.prompt_tokens,
-          outputTokens: data.usage?.completion_tokens,
-          totalCost: data.usage?.total_cost,
+          inputTokens: data.usageMetadata?.promptTokenCount,
+          outputTokens: data.usageMetadata?.candidatesTokenCount,
         };
 
-        // Log telemetry
         console.log(
-          `[OpenRouter] model=${meta.model} latency=${meta.latencyMs}ms tokens=${meta.inputTokens || '?'}/${meta.outputTokens || '?'} attempt=${attempt + 1}`
+          `[Gemini] model=${meta.model} latency=${meta.latencyMs}ms tokens=${meta.inputTokens || '?'}/${meta.outputTokens || '?'} attempt=${attempt + 1}`
         );
 
         return {
           success: true,
-          content: choice.message.content,
+          content: contentPart,
           meta,
         };
       } catch (err: unknown) {
@@ -191,7 +201,7 @@ export class OpenRouterClient implements AIClient {
     return {
       success: false,
       error: `All ${this.config.maxRetries + 1} attempts failed. Last error: ${lastError}`,
-      meta: { latencyMs: Date.now() - startTime },
+      meta: { latencyMs: Date.now() - startTime, model: this.config.model },
     };
   }
 
